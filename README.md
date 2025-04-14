@@ -4,7 +4,7 @@
 
 Official implementation for "Physics-Informed Diffusion Model for Press-Pack IGCT Online Thermal Monitoring Based on Recurrent Polar Convolutional Neural Network"
 
-![title](./assets/concept.png)
+<img src="./assets/concept.png" alt="concept image" width="500">
 
 ## 🧩 Setup Guideline
 Please meet the requirement of `environment.yaml`. In general, the following dependencies should be installed
