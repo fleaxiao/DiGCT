@@ -1,0 +1,36 @@
+# Paths
+dataset_path: "dataset"
+
+# Image parameters
+image_size: 256
+
+# Temperature parameters
+T_max: 100
+T_min: 25
+Tc: 25
+hg: 3e4
+h_air: 7.5e3
+
+# Circuit parameters
+Vce: 1.2
+rce: 1.5e-3
+f: 250
+Irate: 1000
+Eon: 3
+Eoff: 15
+
+# geometric parameters
+R_node_1: 2.5e-3
+R_node_2: 21.5e-3
+R_node_3: 24.5e-3
+R_heatsink: 67.5e-3
+L_heatsink: 82e-3
+R_spacer: 42.5e-3
+L_spacer: 2e-3
+R_chip: 42.5e-3
+L_chip: 0.5e-3
+
+# material parameters
+k_cu: 400
+k_mo: 138
+k_si: 130

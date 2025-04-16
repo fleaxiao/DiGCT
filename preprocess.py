@@ -1,64 +1,94 @@
 import os
+import re
+import yaml
+import argparse
+import numpy as np
+import pandas as pd
+
+from tqdm import tqdm
 from PIL import Image, ImageDraw
-import shutil
+from scipy.interpolate import interp1d
 
-input_folder = "./data"
-output_folder = "./dataset"
+from tools import s2c_angle
 
-angle_step = 30
+def smooth_interpolation(pixels, target_length):
+    extended_pixels = pixels + [pixels[0]]
+    x = np.linspace(0, len(extended_pixels) - 1, num=len(extended_pixels))
+    f = interp1d(x, extended_pixels, kind='cubic', axis=0) 
+    x_new = np.linspace(0, len(extended_pixels) - 1, num=target_length) 
+    return [tuple(map(int, f(i))) for i in x_new]
 
-surface_start = 378
-surface_end = 2526
-side_start = 132
-side_end = 2772
+def data_preprocess(args):
 
-surface_center = surface_start + (surface_end - surface_start) // 2
-surface_radius = (surface_end - surface_start) // 2
-side_length = side_end - side_start
+    # Load config file
+    DATA_PATH = args.data_path
+    DATASET_PATH = args.dataset_path
+    IMAGE_SIZE = args.image_size
+    ANGLE_STEP = args.angle_step
 
-os.makedirs(output_folder, exist_ok=True)
+    surface_start = 378
+    surface_end = 2526
+    side_start = 132
+    side_end = 2772
 
-for filename in os.listdir(input_folder):
+    surface_center = surface_start + (surface_end - surface_start) // 2
+    surface_radius = (surface_end - surface_start) // 2
+    side_length = side_end - side_start
 
-    ## Surface images
-    if filename.startswith("surface") and filename.endswith(".png") and not filename.endswith("_0.png"):
-        input_path = os.path.join(input_folder, filename)
-        
-        with Image.open(input_path) as img:
-            img = img.convert("RGBA")
+    S_PATH = os.path.join(DATASET_PATH, "S")
+    L_PATH = os.path.join(DATASET_PATH, "L")
+    L2S_PATH = os.path.join(DATASET_PATH, "L2S")
+    P2S_PATH = os.path.join(DATASET_PATH, "P2S")
 
-            width, height = img.size
-            left = surface_center - surface_radius
-            top = height // 2 - surface_radius
-            right = surface_center + surface_radius
-            bottom = height // 2 + surface_radius
+    os.makedirs(DATASET_PATH, exist_ok=True)
+    os.makedirs(S_PATH, exist_ok=True)
+    os.makedirs(L_PATH, exist_ok=True)
+    os.makedirs(L2S_PATH, exist_ok=True)
+    os.makedirs(P2S_PATH, exist_ok=True)
+
+    for filename in tqdm(os.listdir(DATA_PATH), desc="Processing files"):
+
+        ## Surface images
+        if filename.startswith("surface") and filename.endswith(".png") and not filename.endswith("_0.png"):
+            input_path = os.path.join(DATA_PATH, filename)
             
-            # transparent circle crop
-            cropped_img = img.crop((left, top, right, bottom))
-            
-            mask = Image.new("L", (right - left, bottom - top), 0)
-            draw = ImageDraw.Draw(mask)
+            with Image.open(input_path) as img:
+                img = img.convert("RGBA")
 
-            draw.ellipse((0, 0, right - left, bottom - top), fill=255)
-            cropped_img.putalpha(mask)
-            
-            # rotation and save the images
-            for angle in range(0, 360, angle_step):
-                rotated_img = cropped_img.rotate(angle, expand=False)
+                width, height = img.size
+                left = surface_center - surface_radius
+                top = height // 2 - surface_radius
+                right = surface_center + surface_radius
+                bottom = height // 2 + surface_radius
+                
+                cropped_img = img.crop((left, top, right, bottom))
+                
+                mask = Image.new("L", (right - left, bottom - top), 0)
+                draw = ImageDraw.Draw(mask)
 
-                name, ext = os.path.splitext(filename)
-                output_filename = f"{name}_rotated_{angle}{ext}"
-                output_path = os.path.join(output_folder, output_filename)
-                rotated_img.save(output_path)
-        
+                draw.ellipse((0, 0, right - left, bottom - top), fill=255)
+                cropped_img.putalpha(mask)
+                
+                for angle in range(0, 360, ANGLE_STEP):
+                    rotated_img = cropped_img.rotate(angle, expand=False)
+                    rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.LANCZOS)
+
+                    name, ext = os.path.splitext(filename)
+                    number_match = re.search(r"F_(-?\d+)", name)
+                    if number_match:
+                        number = int(abs(int(number_match.group(1))) * 2 / 1000)
+                        name = re.sub(r"F_(-?\d+)", f"F_{number}", name)
+                    output_filename = f"{name}_angle_{angle}{ext}"
+                    output_path = os.path.join(S_PATH, output_filename)
+                    rotated_img.save(output_path)
+            
         ## Side images
         if filename.startswith("side") and filename.endswith(".png") and not filename.endswith("_0.png"):
-            input_path = os.path.join(input_folder, filename)
+            input_path = os.path.join(DATA_PATH, filename)
 
             with Image.open(input_path) as img:
                 img = img.convert("RGBA")
 
-                # Extract pixels from side_start to side_end along the center line
                 width, height = img.size
                 center_line = height // 2
                 pixels = []
@@ -66,24 +96,97 @@ for filename in os.listdir(input_folder):
                     pixel = img.getpixel((x, center_line))
                     pixels.append(pixel)
 
+                # Original side image
                 pixels_extend = pixels.copy()
                 reversed_pixels = list(reversed(pixels))
                 pixels_extend.extend(reversed_pixels)
                 pixels_extend.extend(pixels)
 
-                for angle in range(0, 360, angle_step):
-                    start_pixel = int(2* angle * side_length / 360)
+                for angle in range(0, 360, ANGLE_STEP):
+                    start_pixel = int(2 * angle * side_length / 360)
                     pixels_rotated = pixels_extend[start_pixel:start_pixel + side_length]
 
                     img_rotated = Image.new("RGBA", (len(pixels_rotated), 1), (0, 0, 0, 0))
                     img_rotated.putdata(pixels_rotated)
+                    img_rotated = img_rotated.resize((IMAGE_SIZE, 1), Image.LANCZOS)
 
                     name, ext = os.path.splitext(filename)
-                    output_filename = f"{name}_rotated_{angle}{ext}"
-                    output_path = os.path.join(output_folder, output_filename)
+                    number_match = re.search(r"F_(-?\d+)", name)
+                    if number_match:
+                        number = int(abs(int(number_match.group(1))) * 2 / 1000)
+                        name = re.sub(r"F_(-?\d+)", f"F_{number}", name)
+                    output_filename = f"{name}_angle_{angle}{ext}"
+                    output_path = os.path.join(L_PATH, output_filename)
                     img_rotated.save(output_path)
 
-            ## Range csv
-            csv_source_path = os.path.join(input_folder, "T_range.csv")
-            csv_destination_path = os.path.join(output_folder, "T_range.csv")
-            shutil.copy(csv_source_path, csv_destination_path)
+                # p2s side image
+                pixels_extend = pixels.copy()
+                reversed_pixels = list(reversed(pixels))
+                pixels_extend.extend(reversed_pixels)
+                for angle in range(0, 360, ANGLE_STEP):
+                    start_pixel = int(2 * angle * side_length / 360)
+                    interval = side_length // 4
+                    p2s_list = [pixels_extend[(start_pixel + i * interval) % len(pixels_extend)] for i in range(8)]
+                    p2s_list = smooth_interpolation(p2s_list, IMAGE_SIZE + 1)
+                    p2s_image = s2c_angle(p2s_list, IMAGE_SIZE)
+
+                    name, ext = os.path.splitext(filename)
+                    number_match = re.search(r"F_(-?\d+)", name)
+                    if number_match:
+                        number = int(abs(int(number_match.group(1))) * 2 / 1000)
+                        name = re.sub(r"F_(-?\d+)", f"F_{number}", name)
+                        name = name.replace("side", "p2s")
+                    output_filename = f"{name}_angle_{angle}{ext}"
+                    output_path = os.path.join(P2S_PATH, output_filename)
+                    p2s_image.save(output_path)
+
+                # l2s side image
+                img_o = Image.new("RGBA", (len(pixels), 1), (0, 0, 0, 0))
+                img_o.putdata(pixels)
+                img_o = img_o.resize((IMAGE_SIZE, 1), Image.LANCZOS)
+                l2s_list = list(img_o.getdata())
+                l2s_list.extend(reversed(l2s_list))
+
+                l2s_image = s2c_angle(l2s_list, IMAGE_SIZE)
+
+                for angle in range(0, 360, ANGLE_STEP):
+                    rotated_img = l2s_image.rotate(angle, expand=False)
+                    rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.LANCZOS)
+
+                    name, ext = os.path.splitext(filename)
+                    number_match = re.search(r"F_(-?\d+)", name)
+                    if number_match:
+                        number = int(abs(int(number_match.group(1))) * 2 / 1000)
+                        name = re.sub(r"F_(-?\d+)", f"F_{number}", name)
+                        name = name.replace("side", "l2s")
+                    output_filename = f"{name}_angle_{angle}{ext}"
+                    output_path = os.path.join(L2S_PATH, output_filename)
+                    rotated_img.save(output_path)
+
+    ## Range csv
+    t_range = pd.read_csv(os.path.join(DATA_PATH, "T_range.csv"), header=4)
+    t_range.rename(columns={t_range.columns[0]: "F (kN)"}, inplace=True)
+    t_range["F (kN)"] = t_range["F (kN)"].abs() * 2
+    for col in t_range.columns[1:]:
+        t_range[col] = t_range[col].round(3)
+    t_range.to_csv(os.path.join(DATASET_PATH, "T_range.csv"), index=False)
+
+if __name__ == '__main__':
+    p = argparse.ArgumentParser(description='Dataset Preprocessing')
+    p.add_argument('--config', type=argparse.FileType(mode='r'), default='configs/config.yml')
+
+    # Load config file
+    args = p.parse_args()
+    if args.config:
+        config_dict = yaml.load(args.config, Loader=yaml.FullLoader)
+        arg_dict = args.__dict__
+        for key, value in config_dict.items():
+                arg_dict[key] = value
+        args.config = args.config.name
+    else:
+        config_dict = {}
+
+    # Data Preprocessing
+    data_preprocess(args=args)
+
+    print("Dataset preprocessing is completed.")
