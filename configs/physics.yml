@@ -4,12 +4,17 @@ dataset_path: "dataset"
 # Image parameters
 image_size: 256
 
+# Mechanical parameters
+F_standard: 60
+alpha: 5
+
 # Temperature parameters
 T_max: 100
 T_min: 25
 Tc: 25
 hg: 3e4
 h_air: 7.5e3
+beta: 0.2
 
 # Circuit parameters
 Vce: 1.2

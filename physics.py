@@ -5,6 +5,9 @@ import numpy as np
 
 from tqdm import tqdm
 from PIL import Image, ImageDraw
+from matplotlib import cm
+
+from tools import s2c_distance, s2r_distance, sigmoid
 
 
 def physics_informed_model(args):
@@ -16,6 +19,9 @@ def physics_informed_model(args):
     os.makedirs(A_PATH, exist_ok=True)
     IMAGE_SIZE = args.image_size
     
+    F_standard = float(args.F_standard)
+    alpha = float(args.alpha)
+    beta = float(args.beta)
 
     T_max = float(args.T_max)
     T_min = float(args.T_min)
@@ -69,18 +75,33 @@ def physics_informed_model(args):
             P = P_cond + P_sw
 
             Tj = Tc + P * R_total
-            Tnode = Tc + P * R_node_1 * 2/5
+            Tnode = Tc + P * R_total * 2/5
             Tj_std = (Tj - T_min) / (T_max - T_min)
             Tnode_std = (Tnode - T_min) / (T_max - T_min)
 
-            image = Image.new("RGBA", (IMAGE_SIZE, IMAGE_SIZE), (0, 0, 0, 0))
-            draw = ImageDraw.Draw(image)
-            Tj_color = (int(Tj_std * 255), 0, int((1 - Tj_std) * 255), 255)
-            Tnode_color = (int(Tnode_std * 255), 0, int((1 - Tnode_std) * 255), 255)
-            draw.ellipse((0, 0, IMAGE_SIZE, IMAGE_SIZE), fill=Tj_color)
-            draw.ellipse((IMAGE_SIZE/2 - (R_node_3/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 - (R_node_3/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_3/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_3/R_chip * IMAGE_SIZE)/2), fill=Tnode_color)
-            draw.ellipse((IMAGE_SIZE/2 - (R_node_2/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 - (R_node_2/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_2/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_2/R_chip * IMAGE_SIZE)/2), fill=Tj_color)
-            draw.ellipse((IMAGE_SIZE/2 - (R_node_1/R_chip * IMAGE_SIZE)/2, (IMAGE_SIZE/2 - (R_node_1/R_chip * IMAGE_SIZE)/2), (IMAGE_SIZE/2 + (R_node_1/R_chip * IMAGE_SIZE)/2), (IMAGE_SIZE/2 + (R_node_1/R_chip * IMAGE_SIZE)/2)), fill=Tnode_color)
+            # force and temperature coefficients
+            F=80
+            coef_F = sigmoid(alpha * (F / F_standard - 1))
+            coef_T = sigmoid(beta * (Tj / Tc - 1))
+
+            Tj_list = list(np.linspace(Tj_std, coef_F*Tj_std, num=IMAGE_SIZE//2, endpoint=False))
+            Tj_list = [tuple(int(c * 255) for c in cm.jet(value)) for value in Tj_list]
+            Tnode_list = list(np.linspace(Tnode_std, coef_F*Tnode_std, num=IMAGE_SIZE//2, endpoint=False))
+            Tnode_list = [tuple(int(c * 255) for c in cm.jet(value)) for value in Tnode_list]
+
+            image = s2c_distance(Tj_list, IMAGE_SIZE)
+            image = s2r_distance(image, Tnode_list, IMAGE_SIZE, 0, R_node_1, R_chip)
+            image = s2r_distance(image, Tnode_list, IMAGE_SIZE, R_node_2, R_node_3, R_chip)
+
+            # Tj_color = tuple(int(c * 255) for c in cm.jet(Tj_std))
+            # Tnode_color = tuple(int(c * 255) for c in cm.jet(Tnode_std))
+
+            # image = Image.new("RGBA", (IMAGE_SIZE, IMAGE_SIZE), (0, 0, 0, 0))
+            # draw = ImageDraw.Draw(image)
+            # draw.ellipse((0, 0, IMAGE_SIZE, IMAGE_SIZE), fill=Tj_color)
+            # draw.ellipse((IMAGE_SIZE/2 - (R_node_3/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 - (R_node_3/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_3/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_3/R_chip * IMAGE_SIZE)/2), fill=Tnode_color)
+            # draw.ellipse((IMAGE_SIZE/2 - (R_node_2/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 - (R_node_2/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_2/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_2/R_chip * IMAGE_SIZE)/2), fill=Tj_color)
+            # draw.ellipse((IMAGE_SIZE/2 - (R_node_1/R_chip * IMAGE_SIZE)/2, (IMAGE_SIZE/2 - (R_node_1/R_chip * IMAGE_SIZE)/2), (IMAGE_SIZE/2 + (R_node_1/R_chip * IMAGE_SIZE)/2), (IMAGE_SIZE/2 + (R_node_1/R_chip * IMAGE_SIZE)/2)), fill=Tnode_color)
 
             filename = filename.replace("surface", "Analysis")
             output_path = os.path.join(A_PATH, filename)
