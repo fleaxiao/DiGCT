@@ -4,16 +4,18 @@ from PIL import Image, ImageDraw
 import pandas as pd
 
 
-def s2c_angle(list: list, image_size: int) -> Image:
+def s2c_angle(image: Image, list: list, image_size: int) -> Image:
     """
     Create a circular image with a gradient based on the pixels in the list.
     Each angle in the list corresponds to a color in the image.
 
-    args:
+    Args:
+        image: the original image to draw on
         list: the pixel values for the edges of the circuit
         image_size: the size of the image to be created
     """
-    image = Image.new("RGBA", (image_size, image_size), (0, 0, 0, 0))
+    if image is None:
+        image = Image.new("RGBA", (image_size, image_size), (0, 0, 0, 0))
     center = image_size // 2
     radius = image_size // 2
     for y in range(image_size):
@@ -27,16 +29,18 @@ def s2c_angle(list: list, image_size: int) -> Image:
                 image.putpixel((x, y), list[angle_index])
     return image
 
-def s2c_distance(list: list, image_size: int) -> Image:
+def s2c_distance(image: Image, list: list, image_size: int) -> Image:
     """
     Create a circular image with a gradient based on the pixels in the list.
     Each distance in the list corresponds to a color in the image.
 
-    args:
+    Args:
+        image: the original image to draw on
         list: the pixel values for the edges of the circuit
         image_size: the size of the image to be created
     """
-    image = Image.new("RGBA", (image_size, image_size), (0, 0, 0, 0))
+    if image is None:
+        image = Image.new("RGBA", (image_size, image_size), (0, 0, 0, 0))
     center = image_size // 2
     radius = image_size // 2
     for y in range(image_size):
@@ -51,15 +55,19 @@ def s2c_distance(list: list, image_size: int) -> Image:
 
 def s2r_distance(image, list, image_size, r_i, r_o, r_c) -> Image:
     """
-    Draw a ring on the image.
+    Create a ring image with a gradient based on the pixels in the list.
+    Each distance in the list corresponds to a color in the image.
 
-    args:
-        image: the image to draw on
-        center: the center of the circle
-        radius: the radius of the circle
-        color: the color of the circle
+    Args:
+        image: the original image to draw on
+        list: the pixel values for the radius of the ring
+        image_size: the size of the image to be created
+        r_i: the inner radius of the ring
+        r_o: the outer radius of the ring
+        r_c: the outer radius of the circular
     """
-
+    if image is None:
+        image = Image.new("RGBA", (image_size, image_size), (0, 0, 0, 0))
     center = image_size // 2
     radius = image_size // 2
     radius_i = int(r_i / r_c * radius)
@@ -74,14 +82,25 @@ def s2r_distance(image, list, image_size, r_i, r_o, r_c) -> Image:
                 image.putpixel((x, y), list[distance_index])
     return image
 
-def read_t_range(range_file, force, misplacement, current):
-    
+def read_t_range(range_file: str, F: int, dx: int, I: int) -> tuple:
+    """
+    Read the t_range file and filter the data based on force, misplacement, and current.
+
+    Args:
+        range_file: Path to the t_range file.
+        force: The force value (kN) to filter by.
+        misplacement: The misplacement value (mm) to filter by.
+        current: The current value (A) to filter by.
+    """
     t_range = pd.read_csv(range_file)
-    filtered_data = t_range[(t_range['F (kN)'] == force) & t_range['dx (mm)'] == misplacement & (t_range['I (A)'] == current)]
-    surface_max = float(filtered_data['surface_max (°C)'].values[0]) if not filtered_data.empty else None
-    surface_min = float(filtered_data['surface_min (°C)'].values[0]) if not filtered_data.empty else None
-    side_max = float(filtered_data['side_max (°C)'].values[0]) if not filtered_data.empty else None
-    side_min = float(filtered_data['side_min (°C)'].values[0]) if not filtered_data.empty else None
+    row = t_range[(t_range["F (kN)"] == F) & (t_range["dx (mm)"] == dx) & (t_range["I (A)"] == I)]
+    if not row.empty:
+        surface_max = float(row["surface_max (°C)"].values[0])
+        surface_min = float(row["surface_min (°C)"].values[0])
+        return surface_max, surface_min
+    else:
+        raise ValueError(f"No matching row for F={F}, dx={dx}, I={I}")
+
 
 def sigmoid(x):
     return 1 / (1 + np.exp(- x))

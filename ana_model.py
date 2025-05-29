@@ -4,13 +4,12 @@ import argparse
 import numpy as np
 
 from tqdm import tqdm
-from PIL import Image, ImageDraw
 from matplotlib import cm
 
-from tools import s2c_distance, s2r_distance, sigmoid
+from tools import s2c_distance, s2r_distance, read_t_range, sigmoid
 
 
-def physics_informed_model(args):
+def analytical_model(args):
 
     # load config file
     DATASET_PATH = args.dataset_path
@@ -23,8 +22,6 @@ def physics_informed_model(args):
     alpha = float(args.alpha)
     beta = float(args.beta)
 
-    T_max = float(args.T_max)
-    T_min = float(args.T_min)
     Tc = float(args.Tc)
     hg = float(args.hg)
     h_air = float(args.h_air)
@@ -69,19 +66,23 @@ def physics_informed_model(args):
             # Extract F and I information from the filename
             parts = filename.split('_')
             F = int(parts[2])
+            dx = int(parts[4])
             I = int(parts[6])
             P_cond = np.sqrt(2) * I * Vce * (1 / (2 * np.pi) + (0.8 * 0.85) / 8) + 2 * (I ** 2) * rce * (1 / 8 + (0.8 * 0.85) / (3 * np.pi))
             P_sw = 1 / (np.sqrt(2) * np.pi) * f * (I / Irate) * (Eon + Eoff)
             P = P_cond + P_sw
 
+            T_max, T_min = read_t_range(os.path.join(DATASET_PATH, "T_range.csv"), F, dx, I)
+            T_min = T_min * 2/5
+
             Tj = Tc + P * R_total
             Tnode = Tc + P * R_total * 2/5
+
             Tj_std = (Tj - T_min) / (T_max - T_min)
             Tnode_std = (Tnode - T_min) / (T_max - T_min)
 
             # force and temperature coefficients
-            F=80
-            coef_F = sigmoid(alpha * (F / F_standard - 1))
+            coef_F = sigmoid(alpha * (F / F_standard - 1)) # If F == F_standard, coef_F = 0.5
             coef_T = sigmoid(beta * (Tj / Tc - 1))
 
             Tj_list = list(np.linspace(Tj_std, coef_F*Tj_std, num=IMAGE_SIZE//2, endpoint=False))
@@ -89,21 +90,11 @@ def physics_informed_model(args):
             Tnode_list = list(np.linspace(Tnode_std, coef_F*Tnode_std, num=IMAGE_SIZE//2, endpoint=False))
             Tnode_list = [tuple(int(c * 255) for c in cm.jet(value)) for value in Tnode_list]
 
-            image = s2c_distance(Tj_list, IMAGE_SIZE)
+            image = s2c_distance(None, Tj_list, IMAGE_SIZE)
             image = s2r_distance(image, Tnode_list, IMAGE_SIZE, 0, R_node_1, R_chip)
             image = s2r_distance(image, Tnode_list, IMAGE_SIZE, R_node_2, R_node_3, R_chip)
 
-            # Tj_color = tuple(int(c * 255) for c in cm.jet(Tj_std))
-            # Tnode_color = tuple(int(c * 255) for c in cm.jet(Tnode_std))
-
-            # image = Image.new("RGBA", (IMAGE_SIZE, IMAGE_SIZE), (0, 0, 0, 0))
-            # draw = ImageDraw.Draw(image)
-            # draw.ellipse((0, 0, IMAGE_SIZE, IMAGE_SIZE), fill=Tj_color)
-            # draw.ellipse((IMAGE_SIZE/2 - (R_node_3/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 - (R_node_3/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_3/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_3/R_chip * IMAGE_SIZE)/2), fill=Tnode_color)
-            # draw.ellipse((IMAGE_SIZE/2 - (R_node_2/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 - (R_node_2/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_2/R_chip * IMAGE_SIZE)/2, IMAGE_SIZE/2 + (R_node_2/R_chip * IMAGE_SIZE)/2), fill=Tj_color)
-            # draw.ellipse((IMAGE_SIZE/2 - (R_node_1/R_chip * IMAGE_SIZE)/2, (IMAGE_SIZE/2 - (R_node_1/R_chip * IMAGE_SIZE)/2), (IMAGE_SIZE/2 + (R_node_1/R_chip * IMAGE_SIZE)/2), (IMAGE_SIZE/2 + (R_node_1/R_chip * IMAGE_SIZE)/2)), fill=Tnode_color)
-
-            filename = filename.replace("surface", "Analysis")
+            filename = filename.replace("surface", "analysis")
             output_path = os.path.join(A_PATH, filename)
             image.save(output_path)
 
@@ -123,8 +114,6 @@ if __name__ == '__main__':
         config_dict = {}
 
     # Data Preprocessing
-    physics_informed_model(args=args)
+    analytical_model(args=args)
 
-    print("Physics-Informed Dataset preprocessing is completed.")
-
-
+    print("Analytical reference is generated.")
