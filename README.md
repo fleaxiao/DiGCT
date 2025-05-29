@@ -8,9 +8,9 @@ Official implementation for "Physics-Informed Diffusion Model for Press-Pack IGC
 
 ## 🧩 Setup Guideline
 Please meet the requirement of `environment.yaml`. In general, the following dependencies should be installed
-* PyTorch >= 1.6.0
-* numpy
 * Python >= 3.6 
+* CUDA
+* PyTorch >= 1.6.0
 
 ## 🔥 Quickstart
 
@@ -39,6 +39,9 @@ If you use this code for your research, please cite the following work:
     pages     = {4546-4555}
 }
 ```
+
+## ☎️ Contact
+If you have any questions, please contact me at x.yang2@tue.nl
 
 ## ©️ License
 This work is licensed under a MIT License.

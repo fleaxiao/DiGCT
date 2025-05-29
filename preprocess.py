@@ -41,10 +41,8 @@ def data_preprocess(args):
     P2S_PATH = os.path.join(DATASET_PATH, "P2S")
 
     os.makedirs(DATASET_PATH, exist_ok=True)
-    os.makedirs(S_PATH, exist_ok=True)
-    os.makedirs(L_PATH, exist_ok=True)
-    os.makedirs(L2S_PATH, exist_ok=True)
-    os.makedirs(P2S_PATH, exist_ok=True)
+    for path in [S_PATH, L_PATH, L2S_PATH, P2S_PATH]:
+        os.makedirs(path, exist_ok=True)
 
     for filename in tqdm(os.listdir(DATA_PATH), desc="Processing files"):
 
@@ -71,7 +69,7 @@ def data_preprocess(args):
                 
                 for angle in range(0, 360, ANGLE_STEP):
                     rotated_img = cropped_img.rotate(angle, expand=False)
-                    rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.LANCZOS)
+                    rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.Resampling.LANCZOS)
 
                     name, ext = os.path.splitext(filename)
                     number_match = re.search(r"F_(-?\d+)", name)
@@ -108,7 +106,7 @@ def data_preprocess(args):
 
                     img_rotated = Image.new("RGBA", (len(pixels_rotated), 1), (0, 0, 0, 0))
                     img_rotated.putdata(pixels_rotated)
-                    img_rotated = img_rotated.resize((IMAGE_SIZE, 1), Image.LANCZOS)
+                    img_rotated = img_rotated.resize((IMAGE_SIZE, 1), Image.Resampling.LANCZOS)
 
                     name, ext = os.path.splitext(filename)
                     number_match = re.search(r"F_(-?\d+)", name)
@@ -128,7 +126,7 @@ def data_preprocess(args):
                     interval = side_length // 4
                     p2s_list = [pixels_extend[(start_pixel + i * interval) % len(pixels_extend)] for i in range(8)]
                     p2s_list = smooth_interpolation(p2s_list, IMAGE_SIZE + 1)
-                    p2s_image = s2c_angle(p2s_list, IMAGE_SIZE)
+                    p2s_image = s2c_angle(None, p2s_list, IMAGE_SIZE)
 
                     name, ext = os.path.splitext(filename)
                     number_match = re.search(r"F_(-?\d+)", name)
@@ -143,15 +141,15 @@ def data_preprocess(args):
                 # l2s side image
                 img_o = Image.new("RGBA", (len(pixels), 1), (0, 0, 0, 0))
                 img_o.putdata(pixels)
-                img_o = img_o.resize((IMAGE_SIZE, 1), Image.LANCZOS)
+                img_o = img_o.resize((IMAGE_SIZE, 1), Image.Resampling.LANCZOS)
                 l2s_list = list(img_o.getdata())
                 l2s_list.extend(reversed(l2s_list))
 
-                l2s_image = s2c_angle(l2s_list, IMAGE_SIZE)
+                l2s_image = s2c_angle(None, l2s_list, IMAGE_SIZE)
 
                 for angle in range(0, 360, ANGLE_STEP):
                     rotated_img = l2s_image.rotate(angle, expand=False)
-                    rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.LANCZOS)
+                    rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.Resampling.LANCZOS)
 
                     name, ext = os.path.splitext(filename)
                     number_match = re.search(r"F_(-?\d+)", name)

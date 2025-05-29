@@ -9,7 +9,7 @@ F_standard: 60
 alpha: 5
 
 # Temperature parameters
-T_max: 100
+T_max: 42
 T_min: 25
 Tc: 25
 hg: 3e4
