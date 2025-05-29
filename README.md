@@ -12,7 +12,7 @@ Please meet the requirement of `environment.yaml`.
 conda env create -n DL -f requirement.yml
 ```
 In general, the following dependencies should be installed
-* Python >= 3.6 
+* Python >= 3.12
 * CUDA
 * PyTorch >= 1.6.0
 
