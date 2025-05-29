@@ -83,11 +83,7 @@ def analytical_model(args):
             print(Tj_std, Tnode_std)
 
             # force and temperature coefficients
-<<<<<<< HEAD:physics.py
-            coef_F = sigmoid(alpha * (F / F_standard - 1))
-=======
             coef_F = sigmoid(alpha * (F / F_standard - 1)) # If F == F_standard, coef_F = 0.5
->>>>>>> 7856d314f70b03d8f846334176a19739a5d6b7dc:ana_model.py
             coef_T = sigmoid(beta * (Tj / Tc - 1))
 
             Tj_list = list(np.linspace(Tj_std, coef_F*Tj_std, num=IMAGE_SIZE//2, endpoint=False))
@@ -99,11 +95,7 @@ def analytical_model(args):
             image = s2r_distance(image, Tnode_list, IMAGE_SIZE, 0, R_node_1, R_chip)
             image = s2r_distance(image, Tnode_list, IMAGE_SIZE, R_node_2, R_node_3, R_chip)
 
-<<<<<<< HEAD:physics.py
-            filename = filename.replace("surface", "Analysis")
-=======
             filename = filename.replace("surface", "analysis")
->>>>>>> 7856d314f70b03d8f846334176a19739a5d6b7dc:ana_model.py
             output_path = os.path.join(A_PATH, filename)
             image.save(output_path)
 

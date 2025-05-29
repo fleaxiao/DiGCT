@@ -7,7 +7,11 @@ Official implementation for "Physics-Informed Diffusion Model for Press-Pack IGC
 <img src="./assets/concept.png" alt="concept image" width="500">
 
 ## 🧩 Setup Guideline
-Please meet the requirement of `environment.yaml`. In general, the following dependencies should be installed
+Please meet the requirement of `environment.yaml`. 
+```bash
+conda env create -n DL -f requirement.yml
+```
+In general, the following dependencies should be installed
 * Python >= 3.6 
 * CUDA
 * PyTorch >= 1.6.0
