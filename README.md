@@ -13,7 +13,6 @@ conda env create -n DL -f requirement.yml
 ```
 In general, the following dependencies should be installed
 * Python >= 3.12
-* CUDA
 * PyTorch >= 1.6.0
 
 ## 🔥 Quickstart
