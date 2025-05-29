@@ -82,19 +82,15 @@ def s2r_distance(image, list, image_size, r_i, r_o, r_c) -> Image:
                 image.putpixel((x, y), list[distance_index])
     return image
 
-<<<<<<< HEAD
-def read_t_range(range_file: str, force: float, misplacement: float, current: float):
-=======
 def read_t_range(range_file: str, F: int, dx: int, I: int) -> tuple:
->>>>>>> 7856d314f70b03d8f846334176a19739a5d6b7dc
     """
     Read the t_range file and filter the data based on force, misplacement, and current.
 
     Args:
         range_file: Path to the t_range file.
-        force: The force value (kN) to filter by.
-        misplacement: The misplacement value (mm) to filter by.
-        current: The current value (A) to filter by.
+        F: The force value (kN) to filter by.
+        dx: The misplacement value (mm) to filter by.
+        I: The current value (A) to filter by.
     """
     t_range = pd.read_csv(range_file)
     row = t_range[(t_range["F (kN)"] == F) & (t_range["dx (mm)"] == dx) & (t_range["I (A)"] == I)]
