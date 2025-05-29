@@ -72,10 +72,14 @@ def data_preprocess(args):
                     rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.Resampling.LANCZOS)
 
                     name, ext = os.path.splitext(filename)
-                    number_match = re.search(r"F_(-?\d+)", name)
-                    if number_match:
-                        number = int(abs(int(number_match.group(1))) * 2 / 1000)
-                        name = re.sub(r"F_(-?\d+)", f"F_{number}", name)
+                    f_number_match = re.search(r"F_(-?\d+)", name)
+                    if f_number_match:
+                        f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
+                        name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
+                    dx_number_match = re.search(r"dx_([\d\.]+)", name)
+                    if dx_number_match:
+                        dx_number = int(float(dx_number_match.group(1)) * 1000)
+                        name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
                     output_filename = f"{name}_angle_{angle}{ext}"
                     output_path = os.path.join(S_PATH, output_filename)
                     rotated_img.save(output_path)
@@ -109,10 +113,14 @@ def data_preprocess(args):
                     img_rotated = img_rotated.resize((IMAGE_SIZE, 1), Image.Resampling.LANCZOS)
 
                     name, ext = os.path.splitext(filename)
-                    number_match = re.search(r"F_(-?\d+)", name)
-                    if number_match:
-                        number = int(abs(int(number_match.group(1))) * 2 / 1000)
-                        name = re.sub(r"F_(-?\d+)", f"F_{number}", name)
+                    f_number_match = re.search(r"F_(-?\d+)", name)
+                    if f_number_match:
+                        f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
+                        name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
+                    dx_number_match = re.search(r"dx_([\d\.]+)", name)
+                    if dx_number_match:
+                        dx_number = int(float(dx_number_match.group(1)) * 1000)
+                        name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
                     output_filename = f"{name}_angle_{angle}{ext}"
                     output_path = os.path.join(L_PATH, output_filename)
                     img_rotated.save(output_path)
@@ -129,11 +137,15 @@ def data_preprocess(args):
                     p2s_image = s2c_angle(None, p2s_list, IMAGE_SIZE)
 
                     name, ext = os.path.splitext(filename)
-                    number_match = re.search(r"F_(-?\d+)", name)
-                    if number_match:
-                        number = int(abs(int(number_match.group(1))) * 2 / 1000)
-                        name = re.sub(r"F_(-?\d+)", f"F_{number}", name)
-                        name = name.replace("side", "p2s")
+                    f_number_match = re.search(r"F_(-?\d+)", name)
+                    if f_number_match:
+                        f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
+                        name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
+                    dx_number_match = re.search(r"dx_([\d\.]+)", name)
+                    if dx_number_match:
+                        dx_number = int(float(dx_number_match.group(1)) * 1000)
+                        name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
+                    name = name.replace("side", "p2s")
                     output_filename = f"{name}_angle_{angle}{ext}"
                     output_path = os.path.join(P2S_PATH, output_filename)
                     p2s_image.save(output_path)
@@ -152,11 +164,15 @@ def data_preprocess(args):
                     rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.Resampling.LANCZOS)
 
                     name, ext = os.path.splitext(filename)
-                    number_match = re.search(r"F_(-?\d+)", name)
-                    if number_match:
-                        number = int(abs(int(number_match.group(1))) * 2 / 1000)
-                        name = re.sub(r"F_(-?\d+)", f"F_{number}", name)
-                        name = name.replace("side", "l2s")
+                    f_number_match = re.search(r"F_(-?\d+)", name)
+                    if f_number_match:
+                        f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
+                        name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
+                    dx_number_match = re.search(r"dx_([\d\.]+)", name)
+                    if dx_number_match:
+                        dx_number = int(float(dx_number_match.group(1)) * 1000)
+                        name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
+                    name = name.replace("side", "l2s")
                     output_filename = f"{name}_angle_{angle}{ext}"
                     output_path = os.path.join(L2S_PATH, output_filename)
                     rotated_img.save(output_path)
@@ -165,6 +181,7 @@ def data_preprocess(args):
     t_range = pd.read_csv(os.path.join(DATA_PATH, "T_range.csv"), header=4)
     t_range.rename(columns={t_range.columns[0]: "F (kN)"}, inplace=True)
     t_range["F (kN)"] = t_range["F (kN)"].abs() * 2
+    t_range = t_range[t_range["I (A)"] != 0]  # Remove rows where current is zero
     for col in t_range.columns[1:]:
         t_range[col] = t_range[col].round(3)
     t_range.to_csv(os.path.join(DATASET_PATH, "T_range.csv"), index=False)

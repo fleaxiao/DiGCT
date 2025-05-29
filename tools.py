@@ -82,7 +82,11 @@ def s2r_distance(image, list, image_size, r_i, r_o, r_c) -> Image:
                 image.putpixel((x, y), list[distance_index])
     return image
 
+<<<<<<< HEAD
 def read_t_range(range_file: str, force: float, misplacement: float, current: float):
+=======
+def read_t_range(range_file: str, F: int, dx: int, I: int) -> tuple:
+>>>>>>> 7856d314f70b03d8f846334176a19739a5d6b7dc
     """
     Read the t_range file and filter the data based on force, misplacement, and current.
 
@@ -93,11 +97,14 @@ def read_t_range(range_file: str, force: float, misplacement: float, current: fl
         current: The current value (A) to filter by.
     """
     t_range = pd.read_csv(range_file)
-    filtered_data = t_range[(t_range['F (kN)'] == force) & t_range['dx (mm)'] == misplacement & (t_range['I (A)'] == current)]
-    surface_max = float(filtered_data['surface_max (°C)'].values[0]) if not filtered_data.empty else None
-    surface_min = float(filtered_data['surface_min (°C)'].values[0]) if not filtered_data.empty else None
-    side_max = float(filtered_data['side_max (°C)'].values[0]) if not filtered_data.empty else None
-    side_min = float(filtered_data['side_min (°C)'].values[0]) if not filtered_data.empty else None
+    row = t_range[(t_range["F (kN)"] == F) & (t_range["dx (mm)"] == dx) & (t_range["I (A)"] == I)]
+    if not row.empty:
+        surface_max = float(row["surface_max (°C)"].values[0])
+        surface_min = float(row["surface_min (°C)"].values[0])
+        return surface_max, surface_min
+    else:
+        raise ValueError(f"No matching row for F={F}, dx={dx}, I={I}")
+
 
 def sigmoid(x):
     return 1 / (1 + np.exp(- x))
