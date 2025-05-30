@@ -80,7 +80,6 @@ def analytical_model(args):
 
             Tj_std = (Tj - T_min) / (T_max - T_min)
             Tnode_std = (Tnode - T_min) / (T_max - T_min)
-            print(Tj_std, Tnode_std)
 
             # force and temperature coefficients
             coef_F = sigmoid(alpha * (F / F_standard - 1)) # If F == F_standard, coef_F = 0.5

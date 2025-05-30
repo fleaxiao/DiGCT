@@ -9,11 +9,6 @@ F_standard: 60
 alpha: 5
 
 # Temperature parameters
-<<<<<<< HEAD
-T_max: 42
-T_min: 25
-=======
->>>>>>> 7856d314f70b03d8f846334176a19739a5d6b7dc
 Tc: 25
 hg: 3e4
 h_air: 7.5e3
