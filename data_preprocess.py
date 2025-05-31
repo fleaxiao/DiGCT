@@ -2,21 +2,13 @@ import os
 import re
 import yaml
 import argparse
-import numpy as np
 import pandas as pd
 
 from tqdm import tqdm
 from PIL import Image, ImageDraw
-from scipy.interpolate import interp1d
 
-from tools import s2c_angle
+from data_tool import smooth_interpolation, s2c_angle
 
-def smooth_interpolation(pixels, target_length):
-    extended_pixels = pixels + [pixels[0]]
-    x = np.linspace(0, len(extended_pixels) - 1, num=len(extended_pixels))
-    f = interp1d(x, extended_pixels, kind='cubic', axis=0) 
-    x_new = np.linspace(0, len(extended_pixels) - 1, num=target_length) 
-    return [tuple(map(int, f(i))) for i in x_new]
 
 def data_preprocess(args):
 
@@ -35,10 +27,10 @@ def data_preprocess(args):
     surface_radius = (surface_end - surface_start) // 2
     side_length = side_end - side_start
 
-    S_PATH = os.path.join(DATASET_PATH, "S")
-    L_PATH = os.path.join(DATASET_PATH, "L")
-    L2S_PATH = os.path.join(DATASET_PATH, "L2S")
-    P2S_PATH = os.path.join(DATASET_PATH, "P2S")
+    S_PATH = os.path.join(DATASET_PATH, "IGCT", "S")
+    L_PATH = os.path.join(DATASET_PATH, "IGCT", "L")
+    L2S_PATH = os.path.join(DATASET_PATH, "IGCT", "L2S")
+    P2S_PATH = os.path.join(DATASET_PATH, "IGCT", "P2S")
 
     os.makedirs(DATASET_PATH, exist_ok=True)
     for path in [S_PATH, L_PATH, L2S_PATH, P2S_PATH]:
@@ -51,7 +43,7 @@ def data_preprocess(args):
             input_path = os.path.join(DATA_PATH, filename)
             
             with Image.open(input_path) as img:
-                img = img.convert("RGBA")
+                img = img.convert("RGB")
 
                 width, height = img.size
                 left = surface_center - surface_radius
@@ -66,7 +58,7 @@ def data_preprocess(args):
 
                 draw.ellipse((0, 0, right - left, bottom - top), fill=255)
                 cropped_img.putalpha(mask)
-                
+
                 for angle in range(0, 360, ANGLE_STEP):
                     rotated_img = cropped_img.rotate(angle, expand=False)
                     rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.Resampling.LANCZOS)
@@ -80,6 +72,7 @@ def data_preprocess(args):
                     if dx_number_match:
                         dx_number = int(float(dx_number_match.group(1)) * 1000)
                         name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
+                    name = name.replace("surface_", "")
                     output_filename = f"{name}_angle_{angle}{ext}"
                     output_path = os.path.join(S_PATH, output_filename)
                     rotated_img.save(output_path)
@@ -100,6 +93,7 @@ def data_preprocess(args):
 
                 # Original side image
                 pixels_extend = pixels.copy()
+                print(pixels_extend)
                 reversed_pixels = list(reversed(pixels))
                 pixels_extend.extend(reversed_pixels)
                 pixels_extend.extend(pixels)
@@ -121,6 +115,7 @@ def data_preprocess(args):
                     if dx_number_match:
                         dx_number = int(float(dx_number_match.group(1)) * 1000)
                         name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
+                    name = name.replace("side_", "")
                     output_filename = f"{name}_angle_{angle}{ext}"
                     output_path = os.path.join(L_PATH, output_filename)
                     img_rotated.save(output_path)
@@ -145,7 +140,7 @@ def data_preprocess(args):
                     if dx_number_match:
                         dx_number = int(float(dx_number_match.group(1)) * 1000)
                         name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
-                    name = name.replace("side", "p2s")
+                    name = name.replace("side_", "")
                     output_filename = f"{name}_angle_{angle}{ext}"
                     output_path = os.path.join(P2S_PATH, output_filename)
                     p2s_image.save(output_path)
@@ -172,7 +167,7 @@ def data_preprocess(args):
                     if dx_number_match:
                         dx_number = int(float(dx_number_match.group(1)) * 1000)
                         name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
-                    name = name.replace("side", "l2s")
+                    name = name.replace("side_", "")
                     output_filename = f"{name}_angle_{angle}{ext}"
                     output_path = os.path.join(L2S_PATH, output_filename)
                     rotated_img.save(output_path)
@@ -184,11 +179,11 @@ def data_preprocess(args):
     t_range = t_range[t_range["I (A)"] != 0]  # Remove rows where current is zero
     for col in t_range.columns[1:]:
         t_range[col] = t_range[col].round(3)
-    t_range.to_csv(os.path.join(DATASET_PATH, "T_range.csv"), index=False)
+    t_range.to_csv(os.path.join(DATASET_PATH, "IGCT", "T_range.csv"), index=False)
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description='Dataset Preprocessing')
-    p.add_argument('--config', type=argparse.FileType(mode='r'), default='configs/config.yml')
+    p.add_argument('--config', type=argparse.FileType(mode='r'), default='configs/config_preprocess.yml')
 
     # Load config file
     args = p.parse_args()

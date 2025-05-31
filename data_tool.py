@@ -1,8 +1,26 @@
 import numpy as np
-
-from PIL import Image, ImageDraw
 import pandas as pd
 
+from PIL import Image
+from scipy.interpolate import interp1d
+
+
+def smooth_interpolation(pixels: tuple, target_length: int) -> list:
+    """
+    Smoothly interpolate a list of pixel values to a target length using cubic interpolation.
+
+    Args:
+        pixels: List of pixel values to be interpolated.
+        target_length: The desired length of the output list.
+    
+    Returns:
+        A list of pixel values interpolated to the target length.
+    """
+    extended_pixels = pixels + [pixels[0]]
+    x = np.linspace(0, len(extended_pixels) - 1, num=len(extended_pixels))
+    f = interp1d(x, extended_pixels, kind='cubic', axis=0) 
+    x_new = np.linspace(0, len(extended_pixels) - 1, num=target_length) 
+    return [tuple(map(int, f(i))) for i in x_new]
 
 def s2c_angle(image: Image, list: list, image_size: int) -> Image:
     """
@@ -100,7 +118,6 @@ def read_t_range(range_file: str, F: int, dx: int, I: int) -> tuple:
         return surface_max, surface_min
     else:
         raise ValueError(f"No matching row for F={F}, dx={dx}, I={I}")
-
 
 def sigmoid(x):
     return 1 / (1 + np.exp(- x))

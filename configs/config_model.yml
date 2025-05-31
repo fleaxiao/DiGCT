@@ -2,14 +2,9 @@
 default_seed: 42
 
 # Paths
-data_path: "data"
-dataset_path: "dataset"
-
-# Image parameters
-image_size: 256
-angle_step: 30
-
-# Physical parameters
+input_path: "dataset"
+data_path: "IGCT"
+output_path: "results"
 
 # Training settings
 training: True
@@ -18,24 +13,22 @@ conditioned_prior: True
 threshold_training: False
 clip_grad: False
 ema: False
+resolution: 64
+validation_split: 0.2
+test_split: 0.2
 loss: "l2"
 noise_schedule: "fixed_linear"
 
 # Training parameters
-max_footprints: 6
-test_split: 0.1
-validation_split: 0.1
-
 epochs: 1000
 noise_steps: 250
-batch_size: 4
+batch_size: 8
 init_lr: 0.00002
 weight_decay: 0.001
 threshold: 0.01
-sample_number: 4
+sample_number: 3
 sample_epoch: 100
 ema_decay: 0.999
-normalization_factors: [1, 4]
 
 # Test settings
 testing: False
@@ -48,9 +41,4 @@ nr_samples: 1
 # Model Parameters
 model_name: "UNet"  
 n_blocks: 4
-## UNet
 n_channels: 32
-## ViT
-n_heads: 4
-embed_dim: 256
-## GNN

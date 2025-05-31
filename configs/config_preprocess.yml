@@ -1,0 +1,7 @@
+# Paths
+data_path: "data"
+dataset_path: "dataset"
+
+# Image parameters
+image_size: 256
+angle_step: 30

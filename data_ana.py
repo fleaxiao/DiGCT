@@ -6,15 +6,15 @@ import numpy as np
 from tqdm import tqdm
 from matplotlib import cm
 
-from tools import s2c_distance, s2r_distance, read_t_range, sigmoid
+from data_tool import s2c_distance, s2r_distance, read_t_range, sigmoid
 
 
 def analytical_model(args):
 
     # load config file
     DATASET_PATH = args.dataset_path
-    S_PATH = os.path.join(DATASET_PATH, "S")
-    A_PATH = os.path.join(DATASET_PATH, "A")
+    S_PATH = os.path.join(DATASET_PATH, "IGCT", "S")
+    A_PATH = os.path.join(DATASET_PATH, "IGCT", "A")
     os.makedirs(A_PATH, exist_ok=True)
     IMAGE_SIZE = args.image_size
     
@@ -62,17 +62,17 @@ def analytical_model(args):
     R_total = 1 / (1 / R_side + 1 / R_side)
 
     for filename in tqdm(os.listdir(S_PATH), desc="Processing files"):
-        if filename.startswith("surface") and filename.endswith(".png"):
+        if filename.endswith(".png"):
             # Extract F and I information from the filename
             parts = filename.split('_')
-            F = int(parts[2])
-            dx = int(parts[4])
-            I = int(parts[6])
+            F = int(parts[1])
+            dx = int(parts[3])
+            I = int(parts[5])
             P_cond = np.sqrt(2) * I * Vce * (1 / (2 * np.pi) + (0.8 * 0.85) / 8) + 2 * (I ** 2) * rce * (1 / 8 + (0.8 * 0.85) / (3 * np.pi))
             P_sw = 1 / (np.sqrt(2) * np.pi) * f * (I / Irate) * (Eon + Eoff)
             P = P_cond + P_sw
 
-            T_max, T_min = read_t_range(os.path.join(DATASET_PATH, "T_range.csv"), F, dx, I)
+            T_max, T_min = read_t_range(os.path.join(DATASET_PATH, "IGCT", "T_range.csv"), F, dx, I)
             T_min = T_min * 2/5
 
             Tj = Tc + P * R_total
@@ -94,13 +94,12 @@ def analytical_model(args):
             image = s2r_distance(image, Tnode_list, IMAGE_SIZE, 0, R_node_1, R_chip)
             image = s2r_distance(image, Tnode_list, IMAGE_SIZE, R_node_2, R_node_3, R_chip)
 
-            filename = filename.replace("surface", "analysis")
             output_path = os.path.join(A_PATH, filename)
             image.save(output_path)
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description='Physics-Informed Dataset Preprocessing')
-    p.add_argument('--config', type=argparse.FileType(mode='r'), default='configs/physics.yml')
+    p.add_argument('--config', type=argparse.FileType(mode='r'), default='configs/config_ana.yml')
 
     # Load config file
     args = p.parse_args()
