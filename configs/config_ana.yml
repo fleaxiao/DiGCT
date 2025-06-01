@@ -5,7 +5,7 @@ dataset_path: "dataset"
 image_size: 256
 
 # Mechanical parameters
-F_standard: 60
+F_standard: 45
 alpha: 5
 
 # Temperature parameters

@@ -7,7 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 from PIL import Image, ImageDraw
 
-from data_tool import smooth_interpolation, s2c_angle
+from data_tool import smooth_interpolation, read_t_range, s2c_angle
 
 
 def data_preprocess(args):
@@ -19,7 +19,7 @@ def data_preprocess(args):
     ANGLE_STEP = args.angle_step
 
     surface_start = 378
-    surface_end = 2526
+    surface_end = 2526 #2526
     side_start = 132
     side_end = 2772
 
@@ -36,143 +36,7 @@ def data_preprocess(args):
     for path in [S_PATH, L_PATH, L2S_PATH, P2S_PATH]:
         os.makedirs(path, exist_ok=True)
 
-    for filename in tqdm(os.listdir(DATA_PATH), desc="Processing files"):
-
-        ## Surface images
-        if filename.startswith("surface") and filename.endswith(".png") and not filename.endswith("_0.png"):
-            input_path = os.path.join(DATA_PATH, filename)
-            
-            with Image.open(input_path) as img:
-                img = img.convert("RGB")
-
-                width, height = img.size
-                left = surface_center - surface_radius
-                top = height // 2 - surface_radius
-                right = surface_center + surface_radius
-                bottom = height // 2 + surface_radius
-                
-                cropped_img = img.crop((left, top, right, bottom))
-                
-                mask = Image.new("L", (right - left, bottom - top), 0)
-                draw = ImageDraw.Draw(mask)
-
-                draw.ellipse((0, 0, right - left, bottom - top), fill=255)
-                cropped_img.putalpha(mask)
-
-                for angle in range(0, 360, ANGLE_STEP):
-                    rotated_img = cropped_img.rotate(angle, expand=False)
-                    rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.Resampling.LANCZOS)
-
-                    name, ext = os.path.splitext(filename)
-                    f_number_match = re.search(r"F_(-?\d+)", name)
-                    if f_number_match:
-                        f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
-                        name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
-                    dx_number_match = re.search(r"dx_([\d\.]+)", name)
-                    if dx_number_match:
-                        dx_number = int(float(dx_number_match.group(1)) * 1000)
-                        name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
-                    name = name.replace("surface_", "")
-                    output_filename = f"{name}_angle_{angle}{ext}"
-                    output_path = os.path.join(S_PATH, output_filename)
-                    rotated_img.save(output_path)
-            
-        ## Side images
-        if filename.startswith("side") and filename.endswith(".png") and not filename.endswith("_0.png"):
-            input_path = os.path.join(DATA_PATH, filename)
-
-            with Image.open(input_path) as img:
-                img = img.convert("RGBA")
-
-                width, height = img.size
-                center_line = height // 2
-                pixels = []
-                for x in range(side_start, side_end):
-                    pixel = img.getpixel((x, center_line))
-                    pixels.append(pixel)
-
-                # Original side image
-                pixels_extend = pixels.copy()
-                print(pixels_extend)
-                reversed_pixels = list(reversed(pixels))
-                pixels_extend.extend(reversed_pixels)
-                pixels_extend.extend(pixels)
-
-                for angle in range(0, 360, ANGLE_STEP):
-                    start_pixel = int(2 * angle * side_length / 360)
-                    pixels_rotated = pixels_extend[start_pixel:start_pixel + side_length]
-
-                    img_rotated = Image.new("RGBA", (len(pixels_rotated), 1), (0, 0, 0, 0))
-                    img_rotated.putdata(pixels_rotated)
-                    img_rotated = img_rotated.resize((IMAGE_SIZE, 1), Image.Resampling.LANCZOS)
-
-                    name, ext = os.path.splitext(filename)
-                    f_number_match = re.search(r"F_(-?\d+)", name)
-                    if f_number_match:
-                        f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
-                        name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
-                    dx_number_match = re.search(r"dx_([\d\.]+)", name)
-                    if dx_number_match:
-                        dx_number = int(float(dx_number_match.group(1)) * 1000)
-                        name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
-                    name = name.replace("side_", "")
-                    output_filename = f"{name}_angle_{angle}{ext}"
-                    output_path = os.path.join(L_PATH, output_filename)
-                    img_rotated.save(output_path)
-
-                # p2s side image
-                pixels_extend = pixels.copy()
-                reversed_pixels = list(reversed(pixels))
-                pixels_extend.extend(reversed_pixels)
-                for angle in range(0, 360, ANGLE_STEP):
-                    start_pixel = int(2 * angle * side_length / 360)
-                    interval = side_length // 4
-                    p2s_list = [pixels_extend[(start_pixel + i * interval) % len(pixels_extend)] for i in range(8)]
-                    p2s_list = smooth_interpolation(p2s_list, IMAGE_SIZE + 1)
-                    p2s_image = s2c_angle(None, p2s_list, IMAGE_SIZE)
-
-                    name, ext = os.path.splitext(filename)
-                    f_number_match = re.search(r"F_(-?\d+)", name)
-                    if f_number_match:
-                        f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
-                        name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
-                    dx_number_match = re.search(r"dx_([\d\.]+)", name)
-                    if dx_number_match:
-                        dx_number = int(float(dx_number_match.group(1)) * 1000)
-                        name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
-                    name = name.replace("side_", "")
-                    output_filename = f"{name}_angle_{angle}{ext}"
-                    output_path = os.path.join(P2S_PATH, output_filename)
-                    p2s_image.save(output_path)
-
-                # l2s side image
-                img_o = Image.new("RGBA", (len(pixels), 1), (0, 0, 0, 0))
-                img_o.putdata(pixels)
-                img_o = img_o.resize((IMAGE_SIZE, 1), Image.Resampling.LANCZOS)
-                l2s_list = list(img_o.getdata())
-                l2s_list.extend(reversed(l2s_list))
-
-                l2s_image = s2c_angle(None, l2s_list, IMAGE_SIZE)
-
-                for angle in range(0, 360, ANGLE_STEP):
-                    rotated_img = l2s_image.rotate(angle, expand=False)
-                    rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.Resampling.LANCZOS)
-
-                    name, ext = os.path.splitext(filename)
-                    f_number_match = re.search(r"F_(-?\d+)", name)
-                    if f_number_match:
-                        f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
-                        name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
-                    dx_number_match = re.search(r"dx_([\d\.]+)", name)
-                    if dx_number_match:
-                        dx_number = int(float(dx_number_match.group(1)) * 1000)
-                        name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
-                    name = name.replace("side_", "")
-                    output_filename = f"{name}_angle_{angle}{ext}"
-                    output_path = os.path.join(L2S_PATH, output_filename)
-                    rotated_img.save(output_path)
-
-    ## Range csv
+    ## Temperature range csv
     t_range = pd.read_csv(os.path.join(DATA_PATH, "T_range.csv"), header=4)
     t_range.rename(columns={t_range.columns[0]: "F (kN)"}, inplace=True)
     t_range["F (kN)"] = t_range["F (kN)"].abs() * 2
@@ -180,6 +44,149 @@ def data_preprocess(args):
     for col in t_range.columns[1:]:
         t_range[col] = t_range[col].round(3)
     t_range.to_csv(os.path.join(DATASET_PATH, "IGCT", "T_range.csv"), index=False)
+
+    for filename in tqdm(os.listdir(DATA_PATH), desc="Processing files"):
+        if filename.endswith(".png") and not filename.endswith("_0.png"):
+            parts = filename.split('_')
+            F = int(abs(float(parts[2])) * 2 / 1000)
+            dx = int(float(parts[4]) * 1000)
+            I = int(os.path.splitext(parts[6])[0])
+            surface_max, surface_min, side_max, side_min = read_t_range(os.path.join(DATASET_PATH, "IGCT", "T_range.csv"), F, dx, I)
+
+            ## Surface images
+            if filename.startswith("surface") and filename.endswith(".png") and not filename.endswith("_0.png"):
+                input_path = os.path.join(DATA_PATH, filename)
+                
+                with Image.open(input_path) as img:
+                    img = img.convert("RGB")
+
+                    width, height = img.size
+                    left = surface_center - surface_radius
+                    top = height // 2 - surface_radius
+                    right = surface_center + surface_radius
+                    bottom = height // 2 + surface_radius
+                    
+                    cropped_img = img.crop((left, top, right, bottom))
+                    
+                    mask = Image.new("L", (right - left, bottom - top), 0)
+                    draw = ImageDraw.Draw(mask)
+
+                    draw.ellipse((0, 0, right - left, bottom - top), fill=255)
+                    cropped_img.putalpha(mask)
+
+                    for angle in range(0, 360, ANGLE_STEP):
+                        rotated_img = cropped_img.rotate(angle, expand=False)
+                        rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.Resampling.LANCZOS)
+
+                        name, ext = os.path.splitext(filename)
+                        f_number_match = re.search(r"F_(-?\d+)", name)
+                        if f_number_match:
+                            f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
+                            name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
+                        dx_number_match = re.search(r"dx_([\d\.]+)", name)
+                        if dx_number_match:
+                            dx_number = int(float(dx_number_match.group(1)) * 1000)
+                            name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
+                        name = name.replace("surface_", "")
+                        output_filename = f"{name}_angle_{angle}_Tmax_{surface_max}_Tmin_{surface_min}{ext}"
+                        output_path = os.path.join(S_PATH, output_filename)
+                        rotated_img.save(output_path)
+                
+            ## Side images
+            if filename.startswith("side") and filename.endswith(".png") and not filename.endswith("_0.png"):
+                input_path = os.path.join(DATA_PATH, filename)
+
+                with Image.open(input_path) as img:
+                    img = img.convert("RGBA")
+
+                    width, height = img.size
+                    center_line = height // 2
+                    pixels = []
+                    for x in range(side_start, side_end):
+                        pixel = img.getpixel((x, center_line))
+                        pixels.append(pixel)
+
+                    # Original side image
+                    pixels_extend = pixels.copy()
+
+                    reversed_pixels = list(reversed(pixels))
+                    pixels_extend.extend(reversed_pixels)
+                    pixels_extend.extend(pixels)
+
+                    for angle in range(0, 360, ANGLE_STEP):
+                        start_pixel = int(2 * angle * side_length / 360)
+                        pixels_rotated = pixels_extend[start_pixel:start_pixel + side_length]
+
+                        img_rotated = Image.new("RGBA", (len(pixels_rotated), 1), (0, 0, 0, 0))
+                        img_rotated.putdata(pixels_rotated)
+                        img_rotated = img_rotated.resize((IMAGE_SIZE, 1), Image.Resampling.LANCZOS)
+
+                        name, ext = os.path.splitext(filename)
+                        f_number_match = re.search(r"F_(-?\d+)", name)
+                        if f_number_match:
+                            f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
+                            name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
+                        dx_number_match = re.search(r"dx_([\d\.]+)", name)
+                        if dx_number_match:
+                            dx_number = int(float(dx_number_match.group(1)) * 1000)
+                            name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
+                        name = name.replace("side_", "")
+                        output_filename = f"{name}_angle_{angle}_Tmax_{side_max}_Tmin_{side_min}{ext}"
+                        output_path = os.path.join(L_PATH, output_filename)
+                        img_rotated.save(output_path)
+
+                    # p2s side image
+                    pixels_extend = pixels.copy()
+                    reversed_pixels = list(reversed(pixels))
+                    pixels_extend.extend(reversed_pixels)
+                    for angle in range(0, 360, ANGLE_STEP):
+                        start_pixel = int(2 * angle * side_length / 360)
+                        interval = side_length // 4
+                        p2s_list = [pixels_extend[(start_pixel + i * interval) % len(pixels_extend)] for i in range(8)]
+                        p2s_list = smooth_interpolation(p2s_list, IMAGE_SIZE + 1)
+                        p2s_image = s2c_angle(None, p2s_list, IMAGE_SIZE)
+
+                        name, ext = os.path.splitext(filename)
+                        f_number_match = re.search(r"F_(-?\d+)", name)
+                        if f_number_match:
+                            f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
+                            name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
+                        dx_number_match = re.search(r"dx_([\d\.]+)", name)
+                        if dx_number_match:
+                            dx_number = int(float(dx_number_match.group(1)) * 1000)
+                            name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
+                        name = name.replace("side_", "")
+                        output_filename = f"{name}_angle_{angle}_Tmax_{side_max}_Tmin_{side_min}{ext}"
+                        output_path = os.path.join(P2S_PATH, output_filename)
+                        p2s_image.save(output_path)
+
+                    # l2s side image
+                    img_o = Image.new("RGBA", (len(pixels), 1), (0, 0, 0, 0))
+                    img_o.putdata(pixels)
+                    img_o = img_o.resize((IMAGE_SIZE, 1), Image.Resampling.LANCZOS)
+                    l2s_list = list(img_o.getdata())
+                    l2s_list.extend(reversed(l2s_list))
+
+                    l2s_image = s2c_angle(None, l2s_list, IMAGE_SIZE)
+
+                    for angle in range(0, 360, ANGLE_STEP):
+                        rotated_img = l2s_image.rotate(angle, expand=False)
+                        rotated_img = rotated_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.Resampling.LANCZOS)
+
+                        name, ext = os.path.splitext(filename)
+                        f_number_match = re.search(r"F_(-?\d+)", name)
+                        if f_number_match:
+                            f_number = int(abs(int(f_number_match.group(1))) * 2 / 1000)
+                            name = re.sub(r"F_(-?\d+)", f"F_{f_number}", name)
+                        dx_number_match = re.search(r"dx_([\d\.]+)", name)
+                        if dx_number_match:
+                            dx_number = int(float(dx_number_match.group(1)) * 1000)
+                            name = re.sub(r"dx_([\d\.]+)", f"dx_{dx_number}", name)
+                        name = name.replace("side_", "")
+                        output_filename = f"{name}_angle_{angle}_Tmax_{side_max}_Tmin_{side_min}{ext}"
+                        output_path = os.path.join(L2S_PATH, output_filename)
+                        rotated_img.save(output_path)
+
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description='Dataset Preprocessing')

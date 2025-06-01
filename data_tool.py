@@ -22,6 +22,19 @@ def smooth_interpolation(pixels: tuple, target_length: int) -> list:
     x_new = np.linspace(0, len(extended_pixels) - 1, num=target_length) 
     return [tuple(map(int, f(i))) for i in x_new]
 
+def value2gray(value: float) -> tuple:
+    """
+    Convert a normalized value (0 to 1) to a grayscale RGB tuple.
+
+    Args:
+        value: A float value between 0 and 1.
+        
+    Returns:
+        A tuple representing the RGB color in grayscale.
+    """
+    gray = int(np.clip(value, 0, 1) * 255)
+    return (gray, gray, gray)
+
 def s2c_angle(image: Image, list: list, image_size: int) -> Image:
     """
     Create a circular image with a gradient based on the pixels in the list.
@@ -115,7 +128,9 @@ def read_t_range(range_file: str, F: int, dx: int, I: int) -> tuple:
     if not row.empty:
         surface_max = float(row["surface_max (°C)"].values[0])
         surface_min = float(row["surface_min (°C)"].values[0])
-        return surface_max, surface_min
+        side_max = float(row["side_max (°C)"].values[0])
+        side_min = float(row["side_min (°C)"].values[0])
+        return surface_max, surface_min, side_max, side_min
     else:
         raise ValueError(f"No matching row for F={F}, dx={dx}, I={I}")
 
