@@ -23,11 +23,11 @@ def save_image_list(image_list: list[Image], path: str):
     for i, image in enumerate(image_list):
         image.save(os.path.join(path, f"{i}.png"))
 
-def save_images(reference_images: list[Image]=None, generated_images: list[Image]=None, condition_images: list[Image]=None, path: str=None, **kwargs):
+def save_images(target_images: list[Image]=None, output_images: list[Image]=None, condition_images: list[Image]=None, path: str=None, **kwargs):
     # Determine how many image sets are provided
     image_sets_with_titles = {
-        'Reference': reference_images,
-        'Generated': generated_images,
+        'Target': target_images,
+        'Output': output_images,
         'Condition': condition_images
     }
 
@@ -40,7 +40,7 @@ def save_images(reference_images: list[Image]=None, generated_images: list[Image
 
     for row, (title, image_set) in enumerate(image_sets):
         for col, img in enumerate(image_set):
-            axs[row, col].imshow(img, cmap='gray')  # Display the image
+            axs[row, col].imshow(img, cmap='jet', vmin=0, vmax=255)  # Display the image
             axs[row, col].axis('off')  # Hide the axes ticks
             if col == 0:
                 axs[row, col].set_title(title, fontweight='bold', size=20, loc = 'left')  # Set the title of the row

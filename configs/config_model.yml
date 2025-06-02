@@ -13,21 +13,21 @@ conditioned_prior: True
 threshold_training: False
 clip_grad: False
 ema: False
-resolution: 64
+resolution: 32
 validation_split: 0.2
 test_split: 0.2
 loss: "l2"
 noise_schedule: "fixed_linear"
 
 # Training parameters
-epochs: 1000
+epochs: 2000
 noise_steps: 250
-batch_size: 8
+batch_size: 4
 init_lr: 0.00002
 weight_decay: 0.001
 threshold: 0.01
 sample_number: 3
-sample_epoch: 100
+sample_epoch: 5
 ema_decay: 0.999
 
 # Test settings

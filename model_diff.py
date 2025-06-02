@@ -301,7 +301,6 @@ class DDPM_Tools:
 
             for i in tqdm(reversed(range(1, self.noise_steps)), position=0):
                 t = (torch.ones(n) * i).long().to(self.device)
-                x, c = x, c
                 predicted_noise = model(x, c, t)
 
                 alpha = self.alphas[t][:, None, None, None]

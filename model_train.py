@@ -132,7 +132,7 @@ class ModelTrainer:
         sampled_images = tensor_to_PIL(sampled_images)
         condition_images = tensor_to_PIL(condition_images)
         ssim, _, _, _, mae = calculate_metrics(sampled_images, test_images)
-        save_images(reference_images=test_images, generated_images=sampled_images,
+        save_images(target_images=test_images, output_images=sampled_images,
                     condition_images=condition_images, path=os.path.join(self.train_path, f"epoch_{epoch+1}.jpg"))
         return np.mean(ssim), np.mean(mae)
 

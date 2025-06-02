@@ -42,7 +42,7 @@ def data_preprocess(args):
     t_range["F (kN)"] = t_range["F (kN)"].abs() * 2
     t_range = t_range[t_range["I (A)"] != 0]  # Remove rows where current is zero
     for col in t_range.columns[1:]:
-        t_range[col] = t_range[col].round(3)
+        t_range[col] = t_range[col].round(2)
     t_range.to_csv(os.path.join(DATASET_PATH, "IGCT", "T_range.csv"), index=False)
 
     for filename in tqdm(os.listdir(DATA_PATH), desc="Processing files"):

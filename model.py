@@ -114,7 +114,7 @@ def main(args):
         set_seed(seed=DEFAULT_SEED)
 
         ## dataloader
-        train_dataloader, val_dataloader, test_dataloader, _, _, _ = get_data(target_dataset_path=TARGET_DATASET_PATH, condition_dataset_path=CONDITION_DATASET_PATH, result_path=RESULT_PATH, **parameters)
+        train_dataloader, val_dataloader, test_dataloader, _, _, _ = get_data(dataset_path=DATASET_PATH,target_dataset_path=TARGET_DATASET_PATH, condition_dataset_path=CONDITION_DATASET_PATH, result_path=RESULT_PATH, **parameters)
         
         ## model
         model, diffusion = create_model_diffusion(DEVICE, **parameters)

@@ -59,7 +59,7 @@ def save_ordered_dataset(dataset, indices, path):
 
     save_image_list(images, path)
 
-def get_data(target_dataset_path: str, condition_dataset_path: str, result_path: str = None, split: bool = True, **kwargs):
+def get_data(dataset_path: str, target_dataset_path: str, condition_dataset_path: str, result_path: str = None, split: bool = True, **kwargs):
     loss = kwargs.get("loss")
     test_split = kwargs.get("test_split")
     validation_split = kwargs.get("validation_split")
@@ -69,24 +69,32 @@ def get_data(target_dataset_path: str, condition_dataset_path: str, result_path:
     if loss == "l2":
         data_transform = transforms.Compose([
             transforms.Resize((resolution, resolution)),
-            transforms.Lambda(lambda t: t[:3] if t.shape[0] == 4 else t),  # 如果是4通道，只取前3个通道
-            transforms.Grayscale(num_output_channels=1),
-            transforms.ToTensor(),
-            transforms.Lambda(lambda t: t / 255.0),
             transforms.Lambda(lambda t: (t * 2) - 1)
         ])
     elif loss == "vlb":
         data_transform = transforms.Compose([
             transforms.Resize((resolution, resolution)),
-            transforms.Lambda(lambda t: t[:3] if t.shape[0] == 4 else t),  # 如果是4通道，只取前3个通道
-            transforms.Grayscale(num_output_channels=1),
-            transforms.ToTensor(),
-            transforms.Lambda(lambda t: t / 255.0)
         ])
     else:
         raise ValueError("Invalid loss function")
+    
+    # if loss == "l2":
+    #     data_transform = transforms.Compose([
+    #         transforms.Resize((resolution, resolution)),
+    #         transforms.Grayscale(num_output_channels=1),
+    #         transforms.Lambda(lambda t: t / 255.0),
+    #         transforms.Lambda(lambda t: (t * 2) - 1)
+    #     ])
+    # elif loss == "vlb":
+    #     data_transform = transforms.Compose([
+    #         transforms.Resize((resolution, resolution)),
+    #         transforms.Grayscale(num_output_channels=1),
+    #         transforms.Lambda(lambda t: t / 255.0)
+    #     ])
+    # else:
+    #     raise ValueError("Invalid loss function")
 
-    dataset = LabeledDataset(target_dataset_path, condition_dataset_path, data_transform=data_transform)
+    dataset = LabeledDataset(dataset_path, target_dataset_path, condition_dataset_path, result_path,data_transform=data_transform)
 
     if split == True:
         train_size = int((1 - test_split - validation_split) * len(dataset))

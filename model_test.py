@@ -90,7 +90,6 @@ def mae(imageA, imageB):
     return mae
 
 def calculate_metrics(image_set1: list[Image.Image], image_set2: list[Image.Image]):
-    print(len(image_set1), len(image_set2))
 
     if len(image_set1) != len(image_set2):
         raise ValueError("Number of images in image sets do not match")
