@@ -22,7 +22,7 @@ def smooth_interpolation(pixels: tuple, target_length: int) -> list:
     x_new = np.linspace(0, len(extended_pixels) - 1, num=target_length) 
     return [tuple(map(int, f(i))) for i in x_new]
 
-def value2gray(value: float) -> tuple:
+def value2graypixel(value: float) -> tuple:
     """
     Convert a normalized value (0 to 1) to a grayscale RGB tuple.
 
@@ -131,6 +131,30 @@ def read_t_range(range_file: str, F: int, dx: int, I: int) -> tuple:
         side_max = float(row["side_max (°C)"].values[0])
         side_min = float(row["side_min (°C)"].values[0])
         return surface_max, surface_min, side_max, side_min
+    else:
+        raise ValueError(f"No matching row for F={F}, dx={dx}, I={I}")
+    
+def add_t_range(range_file: str, F: int, dx: int, I: int, add_name: str, add_value: float):
+    """
+    Add a new value to the t_range file for a specific force, misplacement, and current.
+
+    Args:
+        range_file: Path to the t_range file.
+        F: The force value (kN) to filter by.
+        dx: The misplacement value (mm) to filter by.
+        I: The current value (A) to filter by.
+        add_name: The name of the column to add the value to.
+        add_value: The value to add.
+    """
+    t_range = pd.read_csv(range_file)
+    if add_name not in t_range.columns:
+        t_range[add_name] = 0.0
+
+    row = t_range[(t_range["F (kN)"] == F) & (t_range["dx (mm)"] == dx) & (t_range["I (A)"] == I)]
+    if not row.empty:
+        row_index = row.index[0]
+        t_range.loc[row_index, add_name] = round(add_value, 2)
+        t_range.to_csv(range_file, index=False)
     else:
         raise ValueError(f"No matching row for F={F}, dx={dx}, I={I}")
 

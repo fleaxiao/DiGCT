@@ -1,5 +1,4 @@
 import os
-import random
 import numpy as np
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
@@ -59,42 +58,20 @@ def save_ordered_dataset(dataset, indices, path):
 
     save_image_list(images, path)
 
-def get_data(dataset_path: str, target_dataset_path: str, condition_dataset_path: str, result_path: str = None, split: bool = True, **kwargs):
+def get_data(dataset_path: str, target_dataset_path: str, condition_dataset_path: str, analysis_dataset_path: str, result_path: str = None, split: bool = True, **kwargs):
     loss = kwargs.get("loss")
     test_split = kwargs.get("test_split")
     validation_split = kwargs.get("validation_split")
     batch_size = kwargs.get("batch_size")
     resolution = kwargs.get("resolution")
 
-    if loss == "l2":
-        data_transform = transforms.Compose([
-            transforms.Resize((resolution, resolution)),
-            transforms.Lambda(lambda t: (t * 2) - 1)
-        ])
-    elif loss == "vlb":
-        data_transform = transforms.Compose([
-            transforms.Resize((resolution, resolution)),
-        ])
-    else:
-        raise ValueError("Invalid loss function")
-    
-    # if loss == "l2":
-    #     data_transform = transforms.Compose([
-    #         transforms.Resize((resolution, resolution)),
-    #         transforms.Grayscale(num_output_channels=1),
-    #         transforms.Lambda(lambda t: t / 255.0),
-    #         transforms.Lambda(lambda t: (t * 2) - 1)
-    #     ])
-    # elif loss == "vlb":
-    #     data_transform = transforms.Compose([
-    #         transforms.Resize((resolution, resolution)),
-    #         transforms.Grayscale(num_output_channels=1),
-    #         transforms.Lambda(lambda t: t / 255.0)
-    #     ])
-    # else:
-    #     raise ValueError("Invalid loss function")
+    data_transform = transforms.Compose([
+        transforms.Resize((resolution, resolution)),
+        transforms.Grayscale(num_output_channels=1),
+        transforms.Lambda(lambda t: t / 255.0)
+    ])
 
-    dataset = LabeledDataset(dataset_path, target_dataset_path, condition_dataset_path, result_path,data_transform=data_transform)
+    dataset = LabeledDataset(dataset_path, target_dataset_path, condition_dataset_path, analysis_dataset_path, result_path, data_transform=data_transform)
 
     if split == True:
         train_size = int((1 - test_split - validation_split) * len(dataset))

@@ -22,7 +22,7 @@ def sample_model_output(
         length: int,
         batch_size: int,
 ):
-    references_list = []
+    targets_list = []
     generated_list = []
     conditions_list = []
     iterator = iter(dataloader)
@@ -32,20 +32,20 @@ def sample_model_output(
     
     else:
         for i in range(0, length, batch_size):
-            references, conditions, masks = next(iterator)
+            targets, conditions, analyses = next(iterator)
             conditions = conditions.to(device)
-            references = references.to(device)
-            masks = masks.to(device)
-            generated, conditions = sampler.p_sample_loop(model=model, n=batch_size, c=conditions, m=masks, resolution=resolution)
-            references = tensor_to_PIL(references)
+            targets = targets.to(device)
+            analyses = analyses.to(device)
+            generated, conditions = sampler.p_sample_loop(model=model, n=batch_size, c=conditions, a=analyses, resolution=resolution)
+            targets = tensor_to_PIL(targets)
             generated = tensor_to_PIL(generated)
             conditions = tensor_to_PIL(conditions)
 
-            references_list.extend(references)
+            targets_list.extend(targets)
             generated_list.extend(generated)
             conditions_list.extend(conditions)
 
-    return references_list, generated_list, conditions_list
+    return targets_list, generated_list, conditions_list
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters())
@@ -102,7 +102,7 @@ def calculate_metrics(image_set1: list[Image.Image], image_set2: list[Image.Imag
 
     for i in range(len(image_set1)):
         ssim_values.append(ssim(np.array(image_set1[i]), np.array(image_set2[i]), win_size=3))
-        psnr_values.append(psnr(np.array(image_set1[i]), np.array(image_set2[i]), data_range=np.array(image_set1[i]).max() - np.array(image_set1[i]).min()))
+        psnr_values.append(psnr(np.array(image_set1[i]), np.array(image_set2[i]), data_range=255))
         mae_values.append(mae_effective_area(np.array(image_set1[i]), np.array(image_set2[i])))
         mse_mean, mse_max = mse(np.array(image_set1[i]), np.array(image_set2[i]))
         mse_mean_values.append(mse_mean)
@@ -128,49 +128,49 @@ def sample_save_metrics(
     dataloader = test_dataloader
 
     sample_path = os.path.join(output_path, "samples")
-    reference_path = os.path.join(output_path, "references")
+    target_path = os.path.join(output_path, "targets")
     condition_path = os.path.join(output_path, "conditions")
 
     parameter_count = count_parameters(model)
-    references, samples, conditions = sample_model_output(model=model, device=device, sampler=sampler, dataloader=dataloader, length=length, batch_size=batch_size, resolution=resolution)
-    ssim_values, psnr_values, mse_mean_values, mse_max_values, mae_values = calculate_metrics(references, samples)
+    targets, samples, conditions = sample_model_output(model=model, device=device, sampler=sampler, dataloader=dataloader, length=length, batch_size=batch_size, resolution=resolution)
+    ssim_values, psnr_values, mse_mean_values, mse_max_values, mae_values = calculate_metrics(targets, samples)
     print(f"SSIM: {(np.mean(ssim_values)):.2f}, PSNR: {(np.mean(psnr_values)):.2f}, MAE: {(np.mean(mae_values)):.2e}, MSE Mean: {(np.mean(mse_mean_values)):.2e}, MSE Max: {(np.mean(mse_max_values)):.2e}, Parameters: {parameter_count}")
 
-    save_image_list(references, reference_path)
+    save_image_list(targets, target_path)
     save_image_list(samples, sample_path)
     save_image_list(conditions, condition_path)
 
-def calculate_error_image(reference: Image, sample: Image):
-    reference_array = np.array(reference)
+def calculate_error_image(target: Image, sample: Image):
+    target_array = np.array(target)
     sample_array = np.array(sample)
 
-    error_array = np.abs(reference_array-sample_array)
+    error_array = np.abs(target_array-sample_array)
 
     error_image = Image.fromarray(error_array)
 
     return error_image
 
-def error_image(structure: Image, reference: Image, sample: Image):
+def error_image(structure: Image, target: Image, sample: Image):
     """
-    Generates an error image highlighting differences between reference and sample images,
+    Generates an error image highlighting differences between target and sample images,
     overlayed onto the structure image. Uses a continuous red-to-green color gradient
     for error magnitudes.
 
     Args:
         structure: Image representing the underlying structure.
-        reference: Reference image for comparison.
-        sample: Sample image to compare against the reference.
+        target: Target image for comparison.
+        sample: Sample image to compare against the target.
 
     Returns:
         Image with the error visualization.
     """
 
     sample_data = sample.getdata()
-    reference_data = reference.getdata()
+    target_data = target.getdata()
     structure_data = structure.getdata()
     mask_data = []
 
-    for pixel1, pixel2, pixel3 in zip(sample_data, reference_data, structure_data):
+    for pixel1, pixel2, pixel3 in zip(sample_data, target_data, structure_data):
         diffs = [abs(pixel1[i] - pixel2[i]) for i in range(len(pixel1))]
         mae = sum(diffs) / (len(pixel1) * 255) * 100
 
@@ -189,9 +189,9 @@ def error_image(structure: Image, reference: Image, sample: Image):
     mask.putdata(mask_data)
     return mask
 
-def comparison_plot(conditions: list, references: list, samples: list, path: str = None, cbar_width=0.02):
+def comparison_plot(conditions: list, targets: list, samples: list, path: str = None, cbar_width=0.02):
     """
-    Creates a comparison plot with reference, sample, and error images, including a color bar for the error visualization.
+    Creates a comparison plot with target, sample, and error images, including a color bar for the error visualization.
     """
     fig, axs = plt.subplots(len(conditions), 3, figsize=(9, 9))
 
@@ -214,16 +214,16 @@ def comparison_plot(conditions: list, references: list, samples: list, path: str
 
     for i in range(len(conditions)):
         # Get the image dimensions
-        height, width = references[i].size
+        height, width = targets[i].size
 
-        # Plot the reference image
-        axs[i, 0].imshow(references[i], extent=[0, width, height, 0])
+        # Plot the target image
+        axs[i, 0].imshow(targets[i], extent=[0, width, height, 0])
 
         # Plot the sample image
         axs[i, 1].imshow(samples[i], extent=[0, width, height, 0])
 
         # Calculate and plot the error image
-        error_img = error_image(conditions[i], references[i], samples[i])
+        error_img = error_image(conditions[i], targets[i], samples[i])
         im = axs[i, 2].imshow(error_img, extent=[0, width, height, 0])
 
     # Add the color bar at the end (after all error images are plotted)

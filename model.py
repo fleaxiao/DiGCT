@@ -3,6 +3,7 @@ import torch
 import os
 import yaml
 import json
+import datetime
 import numpy as np
 
 from torch import optim
@@ -20,11 +21,16 @@ def main(args):
     # Load arguments
     DEFAULT_SEED = args.default_seed 
     INPUT_PATH = args.input_path
-    DATA_PATH = args.data_path
     OUTPUT_PATH = args.output_path
+    DATA_PATH = args.data_path
+    TARGET_FOLDER = args.target_folder
+    CONDITION_FOLDER = args.condition_folder
+    ANALYSIS_FOLDER = args.analysis_folder
 
     TRAINING = args.training
     GENERATE_IMAGES = args.generate_images
+    PHYSICS_PRIOR = args.physics_prior
+    POLAR_CNN = args.polar_cnn
     CONDITIONED_PRIOR = args.conditioned_prior
     THRESHOLD_TRAINING = args.threshold_training
     CLIP_GRAD = args.clip_grad
@@ -57,8 +63,9 @@ def main(args):
     CHANNELS = args.n_channels
 
     DATASET_PATH = os.path.join(INPUT_PATH, DATA_PATH) 
-    TARGET_DATASET_PATH = os.path.join(DATASET_PATH, "S")
-    CONDITION_DATASET_PATH = os.path.join(DATASET_PATH, "P2S")
+    TARGET_DATASET_PATH = os.path.join(DATASET_PATH, TARGET_FOLDER)
+    CONDITION_DATASET_PATH = os.path.join(DATASET_PATH, CONDITION_FOLDER)
+    ANALYSIS_DATASET_PATH = os.path.join(DATASET_PATH, ANALYSIS_FOLDER)
 
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -80,6 +87,8 @@ def main(args):
         "n_channels": CHANNELS,
         "resolution": RESOLUTION,
         "clip_grad": CLIP_GRAD,
+        "physics_prior": PHYSICS_PRIOR,
+        "polar_cnn": POLAR_CNN,
         "conditioned_prior": CONDITIONED_PRIOR,
         "noise_schedule": NOISE_SCHEDULE,
         "loss": LOSS
@@ -109,12 +118,13 @@ def main(args):
             json.dump(parameters, f, indent=4)
         
         print(f"Experiment Name: {RUN_NAME}")
+        print(f"Experiment Time: {datetime.datetime.now()}")
 
         ## seed
         set_seed(seed=DEFAULT_SEED)
 
         ## dataloader
-        train_dataloader, val_dataloader, test_dataloader, _, _, _ = get_data(dataset_path=DATASET_PATH,target_dataset_path=TARGET_DATASET_PATH, condition_dataset_path=CONDITION_DATASET_PATH, result_path=RESULT_PATH, **parameters)
+        train_dataloader, val_dataloader, test_dataloader, _, _, _ = get_data(dataset_path=DATASET_PATH, target_dataset_path=TARGET_DATASET_PATH, condition_dataset_path=CONDITION_DATASET_PATH, analysis_dataset_path=ANALYSIS_DATASET_PATH, result_path=RESULT_PATH, **parameters)
         
         ## model
         model, diffusion = create_model_diffusion(DEVICE, **parameters)
@@ -124,6 +134,7 @@ def main(args):
         trainer = ModelTrainer(model=model,
                             device=DEVICE,
                             optimizer=optimizer,
+                            result_path=RESULT_PATH,
                             train_path=TRAIN_PATH,
                             model_path=MODEL_PATH,
                             train_dataloader=train_dataloader,
@@ -247,13 +258,19 @@ if __name__ == '__main__':
     p.add_argument('--default_seed', action='store', type=int, default=42)
 
     # Paths
-    p.add_argument('--input_path', action='store', type=str, default='data')
-    p.add_argument('--data_path', action='store', type=str, default='LDO')
+    p.add_argument('--input_path', action='store', type=str, default='dataset')
     p.add_argument('--output_path', action='store', type=str, default='results')
+    p.add_argument('--data_path', action='store', type=str, default='IGCT')
+    p.add_argument('--target_folder', action='store', type=str, default='target')
+    p.add_argument('--condition_folder', action='store', type=str, default='condition')
+    p.add_argument('--analysis_folder', action='store', type=str, default='analysis')
 
     # Training settings
     p.add_argument('--training', action='store_true', default=False)
     p.add_argument('--generate_images', action='store_true', default=False)
+
+    p.add_argument('--physics_prior', action='store_true', default=False)
+    p.add_argument('--polar_cnn', action='store_true', default=False)
     p.add_argument('--conditioned_prior', action='store_true', default=False)
     p.add_argument('--threshold_training', action='store_true', default=False)
     p.add_argument('--clip_grad', action='store_true', default=False)

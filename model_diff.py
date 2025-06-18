@@ -282,7 +282,7 @@ class DDPM_Tools:
         timesteps_tensor = torch.tensor(timesteps, dtype=torch.long).to(self.device)
         return timesteps_tensor.repeat(n)
 
-    def p_sample_loop(self, model, n, c, m, resolution: int):
+    def p_sample_loop(self, model, n, c, a, resolution: int):
         logging.info(f"Sampling {n} images")
 
         if c.shape[0] != n:
@@ -321,7 +321,7 @@ class DDPM_Tools:
 
         return x, c
 
-    def training_losses(self, model, x_start, c, m, t):
+    def training_losses(self, model, x_start, c, a, t):
         """
         Calculate the training losses for a single timestep
         Args:
@@ -336,7 +336,6 @@ class DDPM_Tools:
         x_t, noise = self.noise_images(x_start=x_start, t=t)
         x_t, noise, c = x_t, noise, c
         model_output = model(x_t, c, t)
-        model_output = model_output
 
         assert model_output.shape == noise.shape == x_start.shape
 

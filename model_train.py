@@ -24,6 +24,7 @@ class ModelTrainer:
             model: nn.Module,
             device: torch.device,
             optimizer: optim,
+            result_path: str,
             train_path: str,
             model_path: str,
             train_dataloader: DataLoader,
@@ -45,6 +46,7 @@ class ModelTrainer:
         self.mse = nn.MSELoss()
         self.ema = ema
         self.epochs = kwargs.get("epochs")
+        self.result_path = result_path
         self.train_path = train_path
         self.model_path = model_path
         self.threshold_training = kwargs.get("threshold_training")
@@ -71,15 +73,25 @@ class ModelTrainer:
         for param in self.ema_model.parameters():
             param.detach()
 
+        dataset_range = pd.read_csv(os.path.join(self.result_path, "dataset_range.csv"))
+        self.surface_max = dataset_range["surface_max"].values[0]
+        self.surface_min = dataset_range["surface_min"].values[0]
+        self.side_max = dataset_range["side_max"].values[0]
+        self.side_min = dataset_range["side_min"].values[0]
+        self.analysis_max = dataset_range["analysis_max"].values[0]
+        self.analysis_min = dataset_range["analysis_min"].values[0]
+        self.gap_max = dataset_range["gap_max"].values[0]
+        self.gap_min = dataset_range["gap_min"].values[0]
+
     def train_epoch(self):
         loss_total = 0
         self.model.train()
         pbar = tqdm(self.train_dataloader)
 
-        for i, (images, conditions, masks) in enumerate(pbar):
-            images, conditions, masks = images.to(self.device), conditions.to(self.device), masks.to(self.device)
-            t = self.diffusion.sample_timesteps(images.shape[0]).to(self.device) # l2: [0, 1000(noise step)], vlb: [0, 1)
-            losses = self.diffusion.training_losses(model=self.model, x_start=images, c=conditions, m=masks, t=t)
+        for i, (targets, conditions, analyses) in enumerate(pbar):
+            targets, conditions, analyses = targets.to(self.device), conditions.to(self.device), analyses.to(self.device)
+            t = self.diffusion.sample_timesteps(targets.shape[0]).to(self.device) # l2: [0, 1000(noise step)], vlb: [0, 1)
+            losses = self.diffusion.training_losses(model=self.model, x_start=targets, c=conditions, a=analyses, t=t)
             loss = losses["loss"]
             self.optimizer.zero_grad()
             loss.backward()
@@ -103,10 +115,10 @@ class ModelTrainer:
         with torch.no_grad():
             pbar = tqdm(self.val_dataloader)
 
-            for i, (images, conditions, masks) in enumerate(pbar):
-                images, conditions, masks = images.to(self.device), conditions.to(self.device), masks.to(self.device)
-                t = self.diffusion.sample_timesteps(images.shape[0]).to(self.device)
-                losses = self.diffusion.training_losses(model=self.model, x_start=images, c=conditions, m=masks, t=t)
+            for i, (targets, conditions, analyses) in enumerate(pbar):
+                targets, conditions, analyses = targets.to(self.device), conditions.to(self.device), analyses.to(self.device)
+                t = self.diffusion.sample_timesteps(targets.shape[0]).to(self.device)
+                losses = self.diffusion.training_losses(model=self.model, x_start=targets, c=conditions, a=analyses, t=t)
                 loss = losses["loss"].mean()
 
                 pbar.set_postfix(MSE=loss.item())
@@ -117,23 +129,32 @@ class ModelTrainer:
             return average_loss
 
     def generate_samples(self, epoch):
-        test_images, test_conditions, test_masks = next(cycle(self.test_dataloader))
-        test_images = concat_to_batchsize(test_images, self.sample_number)
-        test_conditions = test_conditions.to(self.device)
-        test_masks = test_masks.to(self.device)
-        test_conditions = concat_to_batchsize(test_conditions, self.sample_number)
-        test_masks = concat_to_batchsize(test_masks, self.sample_number)
+        targets, conditions, analyses = next(cycle(self.test_dataloader))
+        targets = concat_to_batchsize(targets, self.sample_number)
+        conditions = conditions.to(self.device)
+        analyses = analyses.to(self.device)
+        conditions = concat_to_batchsize(conditions, self.sample_number)
+        analyses = concat_to_batchsize(analyses, self.sample_number)
         
         if self.ema == True:
-            sampled_images, condition_images = self.diffusion.p_sample_loop(self.ema_model, n=self.sample_number, c=test_conditions, m=test_masks, resolution=self.resolution)
+            samples, conditions = self.diffusion.p_sample_loop(self.ema_model, n=self.sample_number, c=conditions, a=analyses, resolution=self.resolution)
         else:
-            sampled_images, condition_images = self.diffusion.p_sample_loop(self.model, n=self.sample_number, c=test_conditions, m=test_masks, resolution=self.resolution)
-        test_images = tensor_to_PIL(test_images)
-        sampled_images = tensor_to_PIL(sampled_images)
-        condition_images = tensor_to_PIL(condition_images)
-        ssim, _, _, _, mae = calculate_metrics(sampled_images, test_images)
-        save_images(target_images=test_images, output_images=sampled_images,
-                    condition_images=condition_images, path=os.path.join(self.train_path, f"epoch_{epoch+1}.jpg"))
+            samples, conditions = self.diffusion.p_sample_loop(self.model, n=self.sample_number, c=conditions, a=analyses, resolution=self.resolution)
+
+        # targets = tensor_to_PIL(targets)
+        # samples = tensor_to_PIL(samples)
+        # conditions = tensor_to_PIL(conditions)
+        # ssim, _, _, _, mae = calculate_metrics(samples, targets)
+        # save_images(target_images=targets, output_images=samples, condition_images=conditions, path=os.path.join(self.train_path, f"epoch_{epoch+1}.jpg"))
+        
+        targets_pixel, targets_value, targets_max, targets_min = tensor_to_PIL_range(targets, self.surface_max, self.surface_min)
+        samples_pixel, samples_value, samples_max, samples_min = tensor_to_PIL_range(samples, self.surface_max, self.surface_min)
+        conditions_pixel, conditions_value, conditions_max, conditions_min = tensor_to_PIL_range(conditions, self.side_max, self.side_min)
+        ssim, _, _, _, mae = calculate_metrics(samples_pixel, targets_pixel)
+        save_images_range(target_images=targets_value, target_max=targets_max, target_min=targets_min,
+                        output_images=samples_value, output_max=samples_max, output_min=samples_min,
+                        condition_images=conditions_value, condition_max=conditions_max, condition_min=conditions_min,
+                        path=os.path.join(self.train_path, f"epoch_{epoch+1}.jpg"))
         return np.mean(ssim), np.mean(mae)
 
     def update_ema(self):
@@ -172,6 +193,7 @@ class ModelTrainer:
 
                 if (epoch + 1) % self.sample_epoch == 0:
                     ssim, mae = self.generate_samples(epoch)
+                    logging.info(f"SSIM: {ssim}, MAE: {mae}")
                     if self.ema == False and self.loss == 'l2' and mae < self.best_val_loss:
                         self.best_val_loss = mae
                         self.update_best_model(epoch)

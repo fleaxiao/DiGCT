@@ -5,9 +5,9 @@ import argparse
 import numpy as np
 
 from tqdm import tqdm
-from matplotlib import cm
+from PIL import Image, ImageDraw
 
-from data_tool import value2gray, s2c_distance, s2r_distance, read_t_range, sigmoid
+from data_tool import value2graypixel, s2c_distance, s2r_distance, add_t_range, sigmoid
 
 
 def analytical_model(args):
@@ -16,7 +16,10 @@ def analytical_model(args):
     DATASET_PATH = args.dataset_path
     S_PATH = os.path.join(DATASET_PATH, "IGCT", "S")
     A_PATH = os.path.join(DATASET_PATH, "IGCT", "A")
+    G_PATH = os.path.join(DATASET_PATH, "IGCT", "G")
+    T_RANGE_PATH = os.path.join(DATASET_PATH, "IGCT", "T_range.csv")
     os.makedirs(A_PATH, exist_ok=True)
+    os.makedirs(G_PATH, exist_ok=True)
     IMAGE_SIZE = args.image_size
     
     F_standard = float(args.F_standard)
@@ -63,51 +66,87 @@ def analytical_model(args):
     R_total = 1 / (1 / R_side + 1 / R_side)
 
     for filename in tqdm(os.listdir(S_PATH), desc="Processing files"):
-        if filename.endswith(".png"):
-            # Extract F and I information from the filename
-            parts = filename.split('_')
-            F = int(parts[1])
-            dx = int(parts[3])
-            I = int(parts[5])
-            
-            P_cond = np.sqrt(2) * I * Vce * (1 / (2 * np.pi) + (0.8 * 0.85) / 8) + 2 * (I ** 2) * rce * (1 / 8 + (0.8 * 0.85) / (3 * np.pi))
-            P_sw = 1 / (np.sqrt(2) * np.pi) * f * (I / Irate) * (Eon + Eoff)
-            P = P_cond + P_sw
+        # Extract F and I information from the filename
+        parts = filename.replace('.png', '').split('_')
+        F = int(parts[1])
+        dx = int(parts[3])
+        I = int(parts[5])
+        angle = int(parts[7])
+        Ts_max = float(parts[9])
+        Ts_min = float(parts[11])
+        
+        P_cond = np.sqrt(2) * I * Vce * (1 / (2 * np.pi) + (0.8 * 0.85) / 8) + 2 * (I ** 2) * rce * (1 / 8 + (0.8 * 0.85) / (3 * np.pi))
+        P_sw = 1 / (np.sqrt(2) * np.pi) * f * (I / Irate) * (Eon + Eoff)
+        P = P_cond + P_sw
 
-            Tj = Tc + P * R_total
-            Tnode = Tc + P * R_total * 2/5
+        Tj = Tc + P * R_total
+        Tnode = Tc + P * R_total * 2/5
 
-            # force and temperature coefficients
-            coef_F = sigmoid(alpha * (F / F_standard - 1)) # If F == F_standard, coef_F = 0.5
-            coef_T = sigmoid(beta * (Tj / Tc - 1))
-            T_max = Tj * (1 + (1 - coef_F)/2)
-            T_min = Tj * (1 - (1 - coef_F)/2)
+        # force and temperature coefficients
+        coef_F = sigmoid(alpha * (F / F_standard - 1)) # If F == F_standard, coef_F = 0.5
+        coef_T = sigmoid(beta * (Tj / Tc - 1))
+        Ta_max = Tj * (1 + (1 - coef_F)/2)
+        Ta_min = Tj * (1 - (1 - coef_F)/2)
 
-            Tj_max = (Tj * (1 + (1 - coef_F)/2) - T_min) / (T_max - T_min)
-            Tj_min = (Tj * (1 - (1 - coef_F)/2) - T_min) / (T_max - T_min)
-            Tnode_max = (Tnode * (1 - (1 - coef_F)/2) * (2 -coef_F) - T_min) / (T_max - T_min)
-            Tnode_min = (Tnode * (1 - (1 - coef_F)/2)- T_min) / (T_max - T_min)
+        Tj_max = (Tj * (1 + (1 - coef_F)/2) - Ta_min) / (Ta_max - Ta_min)
+        Tj_min = (Tj * (1 - (1 - coef_F)/2) - Ta_min) / (Ta_max - Ta_min)
+        Tnode_max = (Tnode * (1 - (1 - coef_F)/2) * (2 -coef_F) - Ta_min) / (Ta_max - Ta_min)
+        Tnode_min = (Tnode * (1 - (1 - coef_F)/2)- Ta_min) / (Ta_max - Ta_min)
 
-            Tj_list = list(np.linspace(Tj_max, Tj_min, num=IMAGE_SIZE//2, endpoint=False))
-            Tj_list = [value2gray(value) for value in Tj_list]
-            Tnode_list = list(np.linspace(Tnode_max, Tnode_min, num=IMAGE_SIZE//2, endpoint=False))
-            Tnode_list = [value2gray(value) for value in Tnode_list]
+        ## analysis image
+        Tj_list = list(np.linspace(Tj_max, Tj_min, num=IMAGE_SIZE//2, endpoint=False))
+        Tj_list = [value2graypixel(value) for value in Tj_list]
+        Tnode_list = list(np.linspace(Tnode_max, Tnode_min, num=IMAGE_SIZE//2, endpoint=False))
+        Tnode_list = [value2graypixel(value) for value in Tnode_list]
 
-            image = s2c_distance(None, Tj_list, IMAGE_SIZE)
-            image = s2r_distance(image, Tnode_list, IMAGE_SIZE, 0, R_node_1, R_chip)
-            image = s2r_distance(image, Tnode_list, IMAGE_SIZE, R_node_2, R_node_3, R_chip)
+        a_image = s2c_distance(None, Tj_list, IMAGE_SIZE)
+        a_image = s2r_distance(a_image, Tnode_list, IMAGE_SIZE, 0, R_node_1, R_chip)
+        a_image = s2r_distance(a_image, Tnode_list, IMAGE_SIZE, R_node_2, R_node_3, R_chip)
 
-            name, ext = os.path.splitext(filename)
-            T_max_match = re.search(r"Tmax_([\d\.]+)", name)
-            if  T_max_match:
-                name = re.sub(r"Tmax_([\d\.]+)", f"Tmax_{T_max:.2f}", name)
-            T_min_match = re.search(r"Tmin_([\d\.]+)", name)
-            if  T_min_match:
-                name = re.sub(r"Tmin_([\d\.]+)", f"Tmin_{T_min:.2f}", name)
+        name, ext = os.path.splitext(filename)
+        Ta_max_match = re.search(r"Tmax_([\d\.]+)", name)
+        if  Ta_max_match:
+            a_name = re.sub(r"Tmax_([\d\.]+)", f"Tmax_{Ta_max:.2f}", name)
+        Ta_min_match = re.search(r"Tmin_([\d\.]+)", name)
+        if  Ta_min_match:
+            a_name = re.sub(r"Tmin_([\d\.]+)", f"Tmin_{Ta_min:.2f}", a_name)
 
-            output_filename = f"{name}{ext}"
-            output_path = os.path.join(A_PATH, output_filename)
-            image.save(output_path)
+        a_filename = f"{a_name}{ext}"
+        a_image.save(os.path.join(A_PATH, a_filename))
+
+        add_t_range(T_RANGE_PATH, F, dx, I, 'analysis_max (°C)', Ta_max)
+        add_t_range(T_RANGE_PATH, F, dx, I, 'analysis_min (°C)', Ta_min)
+
+        ## gap image
+        a_np = np.array(a_image)[:,:,1]
+        a_np = a_np.astype(np.float32) / 255.0 * (Ta_max - Ta_min) + Ta_min
+
+        s_np = np.array(Image.open(os.path.join(S_PATH, filename)))[:,:,1]
+        s_np = s_np.astype(np.float32) / 255.0 * (Ts_max - Ts_min) + Ts_min
+
+        g_np = s_np - a_np
+        Tg_max, Tg_min = np.max(g_np), np.min(g_np)
+        g_np = (g_np - Tg_min) / (Tg_max - Tg_min) * 255.0
+        g_image = Image.fromarray(g_np.astype(np.uint8), mode='L')
+        mask = Image.new("L", (IMAGE_SIZE, IMAGE_SIZE), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0, IMAGE_SIZE, IMAGE_SIZE), fill=255)
+        g_image.putalpha(mask)
+        
+        Tg_max_match = re.search(r"Tmax_([\d\.]+)", name)
+        if  Tg_max_match:
+            g_name = re.sub(r"Tmax_([\d\.]+)", f"Tmax_{Tg_max:.2f}", name)
+        Tg_min_match = re.search(r"Tmin_([\d\.]+)", name)
+        if  Tg_min_match:
+            g_name = re.sub(r"Tmin_([\d\.]+)", f"Tmin_{Tg_min:.2f}", g_name)
+        g_filename = f"{g_name}{ext}"
+        g_image.save(os.path.join(G_PATH, g_filename))
+
+        Tg_max = np.float64(Tg_max)
+        Tg_min = np.float64(Tg_min)
+
+        add_t_range(T_RANGE_PATH, F, dx, I, 'gap_max (°C)', Tg_max)
+        add_t_range(T_RANGE_PATH, F, dx, I, 'gap_min (°C)', Tg_min)
 
 
 if __name__ == '__main__':

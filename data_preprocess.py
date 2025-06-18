@@ -70,7 +70,6 @@ def data_preprocess(args):
                     
                     mask = Image.new("L", (right - left, bottom - top), 0)
                     draw = ImageDraw.Draw(mask)
-
                     draw.ellipse((0, 0, right - left, bottom - top), fill=255)
                     cropped_img.putalpha(mask)
 
