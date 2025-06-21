@@ -22,7 +22,7 @@ def extract_label(filename: str):
         raise ValueError(f"Filename {filename} does not match the expected pattern")
 
 class LabeledDataset(Dataset):
-    def __init__(self, dataset_dir:str, target_dir: str, condition_dir: str, analysis_dir: str, result_dir: str, data_transform=None):
+    def __init__(self, dataset_dir:str, target_dir: str, condition_dir: str, analysis_dir: str, result_dir: str, physics_informed: bool, data_transform=None):
         """
         Args:
             dataset_dir: Directory with range csv.
@@ -35,6 +35,7 @@ class LabeledDataset(Dataset):
         self.target_dir = target_dir
         self.condition_dir = condition_dir
         self.analysis_dir = analysis_dir
+        self.physics_informed = physics_informed
         self.data_transform = data_transform
 
         self.target_images = sorted(os.listdir(target_dir))
@@ -88,10 +89,10 @@ class LabeledDataset(Dataset):
         condition_image_path = os.path.join(self.condition_dir, self.condition_images[idx])
         analysis_image_path = os.path.join(self.analysis_dir, self.analysis_images[idx])
 
-        mask = read_image(target_image_path)[1:, ...] 
-        target_image = read_image(target_image_path)[:1, ...] * mask # Assuming we want the first channel (e.g., grayscale)
-        condition_image = read_image(condition_image_path)[:1, ...] * mask  # Assuming we want the first channel (e.g., grayscale)
-        analysis_image = read_image(analysis_image_path)[:1, ...]  * mask # Assuming we want the first channel (e.g., grayscale)
+        mask = (read_image(target_image_path)[1:, ...] == 255).float()
+        target_image = read_image(target_image_path)[:1, ...] * mask 
+        condition_image = read_image(condition_image_path)[:1:, ...] * mask
+        analysis_image = read_image(analysis_image_path)[:1:, ...]  * mask
 
         if self.data_transform:
             t_image = self.data_transform(target_image)
@@ -114,8 +115,11 @@ class LabeledDataset(Dataset):
         c_image = c_image * (c_Tmax - c_Tmin) + c_Tmin
         a_image = a_image * (a_Tmax - a_Tmin) + a_Tmin
 
-        # t_image = (t_image - self.surface_min) / (self.surface_max - self.surface_min)
-        t_image = (t_image - self.gap_min) / (self.gap_max - self.gap_min)
+        if self.physics_informed:
+            t_image = t_image - a_image
+            t_image = (t_image - self.gap_min) / (self.gap_max - self.gap_min)
+        else:
+            t_image = (t_image - self.surface_min) / (self.surface_max - self.surface_min)
         c_image = (c_image - self.side_min) / (self.side_max - self.side_min)
         a_image = (a_image - self.analysis_min) / (self.analysis_max - self.analysis_min)
 

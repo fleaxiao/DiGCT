@@ -64,6 +64,7 @@ def get_data(dataset_path: str, target_dataset_path: str, condition_dataset_path
     validation_split = kwargs.get("validation_split")
     batch_size = kwargs.get("batch_size")
     resolution = kwargs.get("resolution")
+    physics_informed = kwargs.get("physics_informed")
 
     data_transform = transforms.Compose([
         transforms.Resize((resolution, resolution)),
@@ -71,7 +72,7 @@ def get_data(dataset_path: str, target_dataset_path: str, condition_dataset_path
         transforms.Lambda(lambda t: t / 255.0)
     ])
 
-    dataset = LabeledDataset(dataset_path, target_dataset_path, condition_dataset_path, analysis_dataset_path, result_path, data_transform=data_transform)
+    dataset = LabeledDataset(dataset_path, target_dataset_path, condition_dataset_path, analysis_dataset_path, result_path, physics_informed, data_transform=data_transform)
 
     if split == True:
         train_size = int((1 - test_split - validation_split) * len(dataset))

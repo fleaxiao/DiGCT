@@ -1,41 +1,66 @@
+import re
 import numpy as np
 import pandas as pd
 
-from PIL import Image
+from PIL import Image, ImageDraw
 from scipy.interpolate import interp1d
 
 
+def extract_label(filename: str):
+    """
+    Extracts the label from the filename based on a specific pattern.
+    Args:
+        filename: The name of the file from which to extract the label.
+    Returns:
+        A tuple containing the extracted values: (F, dx, I, angle, Tmax, Tmin).
+    """
+    pattern = r'F_(?P<F>-?\d+(?:\.\d+)?)_dx_(?P<dx>-?\d+(?:\.\d+)?)_I_(?P<I>-?\d+(?:\.\d+)?)_angle_(?P<angle>-?\d+(?:\.\d+)?)_Tmax_(?P<Tmax>-?\d+(?:\.\d+)?)_Tmin_(?P<Tmin>-?\d+(?:\.\d+)?)'
+    match = re.search(pattern, filename)
+    if match:
+        F = float(match.group('F'))
+        dx = float(match.group('dx'))
+        I = float(match.group('I'))
+        angle = float(match.group('angle'))
+        Tmax = float(match.group('Tmax'))
+        Tmin = float(match.group('Tmin'))
+        return F, dx, I, angle, Tmax, Tmin
+    else:
+        raise ValueError(f"Filename {filename} does not match the expected pattern")
+
 def smooth_interpolation(pixels: tuple, target_length: int) -> list:
     """
-    Smoothly interpolate a list of pixel values to a target length using cubic interpolation.
+    Smoothly interpolate a list of pixel values to a target length using cubic interpolation,
+    and return grayscale pixel values (0-255).
 
     Args:
         pixels: List of pixel values to be interpolated.
         target_length: The desired length of the output list.
-    
+
     Returns:
-        A list of pixel values interpolated to the target length.
+        A list of grayscale pixel values (int, 0-255) interpolated to the target length.
     """
-    extended_pixels = pixels + [pixels[0]]
+    extended_pixels = list(pixels) + [pixels[0]]
     x = np.linspace(0, len(extended_pixels) - 1, num=len(extended_pixels))
-    f = interp1d(x, extended_pixels, kind='cubic', axis=0) 
-    x_new = np.linspace(0, len(extended_pixels) - 1, num=target_length) 
-    return [tuple(map(int, f(i))) for i in x_new]
+    f = interp1d(x, extended_pixels, kind='cubic')
+    x_new = np.linspace(0, len(extended_pixels) - 1, num=target_length)
+    gray_pixels = [int(np.clip(f(i), 0, 255)) for i in x_new]
+    return gray_pixels
+
 
 def value2graypixel(value: float) -> tuple:
     """
-    Convert a normalized value (0 to 1) to a grayscale RGB tuple.
+    Convert a normalized value (0 to 1) to a grayscale pixel.
 
     Args:
         value: A float value between 0 and 1.
         
     Returns:
-        A tuple representing the RGB color in grayscale.
+        A tuple representing the pixel in grayscale.
     """
     gray = int(np.clip(value, 0, 1) * 255)
-    return (gray, gray, gray)
+    return gray
 
-def s2c_angle(image: Image, list: list, image_size: int) -> Image:
+def s2c_angle(image: Image, list: list, Tj: int, image_size: int) -> Image:
     """
     Create a circular image with a gradient based on the pixels in the list.
     Each angle in the list corresponds to a color in the image.
@@ -43,10 +68,11 @@ def s2c_angle(image: Image, list: list, image_size: int) -> Image:
     Args:
         image: the original image to draw on
         list: the pixel values for the edges of the circuit
+        Tj: the base pixel value for the center of the image
         image_size: the size of the image to be created
     """
     if image is None:
-        image = Image.new("RGBA", (image_size, image_size), (0, 0, 0, 0))
+        image = Image.new("L", (image_size, image_size), 0)
     center = image_size // 2
     radius = image_size // 2
     for y in range(image_size):
@@ -57,7 +83,43 @@ def s2c_angle(image: Image, list: list, image_size: int) -> Image:
             if distance < radius:
                 l2s_angle = np.arctan2(dy, dx)
                 angle_index = int(((l2s_angle + np.pi) / (2 * np.pi)) * len(list)) % len(list)
-                image.putpixel((x, y), list[angle_index])
+                edge_value = list[angle_index]
+                radial_ratio = distance / radius
+                pixel_value = int(Tj + (edge_value - Tj) * radial_ratio)
+                image.putpixel((x, y), pixel_value)
+            else:
+                image.putpixel((x, y), 0)
+    return image
+
+def s2r_angle(image: Image, list: list, Tj: int, image_size: int, r_i, r_o, r_c) -> Image:
+    """
+    Create a circular image with a gradient based on the pixels in the list.
+    Each angle in the list corresponds to a color in the image.
+
+    Args:
+        image: the original image to draw on
+        list: the pixel values for the edges of the circuit
+        Tj: the base pixel value for the center of the image
+        image_size: the size of the image to be created
+    """
+    if image is None:
+        image = Image.new("L", (image_size, image_size), 0)
+    center = image_size // 2
+    radius = image_size // 2
+    radius_i = int(r_i / r_c * radius)
+    radius_o = int(r_o / r_c * radius)
+    for y in range(image_size):
+        for x in range(image_size):
+            dx = x - center
+            dy = y - center
+            distance = np.sqrt(dx ** 2 + dy ** 2)
+            if radius_i < distance < radius_o:
+                l2s_angle = np.arctan2(dy, dx)
+                angle_index = int(((l2s_angle + np.pi) / (2 * np.pi)) * len(list)) % len(list)
+                edge_value = list[angle_index]
+                radial_ratio = distance / radius
+                pixel_value = int(Tj + (edge_value - Tj) * radial_ratio)
+                image.putpixel((x, y), pixel_value)
     return image
 
 def s2c_distance(image: Image, list: list, image_size: int) -> Image:
@@ -71,7 +133,7 @@ def s2c_distance(image: Image, list: list, image_size: int) -> Image:
         image_size: the size of the image to be created
     """
     if image is None:
-        image = Image.new("RGBA", (image_size, image_size), (0, 0, 0, 0))
+        image = Image.new("L", (image_size, image_size), 0)
     center = image_size // 2
     radius = image_size // 2
     for y in range(image_size):
@@ -98,7 +160,7 @@ def s2r_distance(image, list, image_size, r_i, r_o, r_c) -> Image:
         r_c: the outer radius of the circular
     """
     if image is None:
-        image = Image.new("RGBA", (image_size, image_size), (0, 0, 0, 0))
+        image = Image.new("L", (image_size, image_size), 0)
     center = image_size // 2
     radius = image_size // 2
     radius_i = int(r_i / r_c * radius)
@@ -111,6 +173,38 @@ def s2r_distance(image, list, image_size, r_i, r_o, r_c) -> Image:
             if radius_i < distance < radius_o:
                 distance_index = int((distance / radius) * len(list)) % len(list)
                 image.putpixel((x, y), list[distance_index])
+    return image
+
+def image_add_mask(image: Image) -> Image:
+    """
+    Add a circular mask to the image to create a circular effect.
+
+    Args:
+        image: The original image to add the mask to.
+    """
+    image_size = image.size[0]  # Assuming the image is square
+    mask = Image.new("L", (image_size, image_size), 0)
+    draw = ImageDraw.Draw(mask)
+    draw.ellipse((1, 1, image_size - 1, image_size - 1), fill=255)
+    image.putalpha(mask)
+    return image
+
+def image_add_0(image: Image) -> Image:
+    """
+    Remove pixels outside a circular area from the image.
+    Args:
+        image: The original image to process.
+    """
+    image_size = image.size[0]  # Assuming the image is square
+    center = image_size // 2
+    radius = image_size // 2
+    for y in range(image_size):
+        for x in range(image_size):
+            dx = x - center
+            dy = y - center
+            distance = np.sqrt(dx ** 2 + dy ** 2)
+            if distance > radius - 2:
+                image.putpixel((x, y), 0)
     return image
 
 def read_t_range(range_file: str, F: int, dx: int, I: int) -> tuple:
@@ -153,10 +247,11 @@ def add_t_range(range_file: str, F: int, dx: int, I: int, add_name: str, add_val
     row = t_range[(t_range["F (kN)"] == F) & (t_range["dx (mm)"] == dx) & (t_range["I (A)"] == I)]
     if not row.empty:
         row_index = row.index[0]
-        t_range.loc[row_index, add_name] = round(add_value, 2)
+        add_value = round(add_value, 2)
+        t_range.loc[row_index, add_name] = add_value
         t_range.to_csv(range_file, index=False)
     else:
-        raise ValueError(f"No matching row for F={F}, dx={dx}, I={I}")
+        raise ValueError(f"No matching row for F={F}, dx={dx}, I={I}, angle={angle}")
 
 def sigmoid(x):
     return 1 / (1 + np.exp(- x))

@@ -58,6 +58,7 @@ class ModelTrainer:
         self.resolution = kwargs.get("resolution")
         self.noise_schedule = kwargs.get("noise_schedule")
         self.loss = kwargs.get("loss")
+        self.physics_informed = kwargs.get("physics_informed")
 
         self.train_losses = []
         self.val_losses = []
@@ -141,20 +142,16 @@ class ModelTrainer:
         else:
             samples, conditions = self.diffusion.p_sample_loop(self.model, n=self.sample_number, c=conditions, a=analyses, resolution=self.resolution)
 
-        # targets = tensor_to_PIL(targets)
-        # samples = tensor_to_PIL(samples)
-        # conditions = tensor_to_PIL(conditions)
-        # ssim, _, _, _, mae = calculate_metrics(samples, targets)
-        # save_images(target_images=targets, output_images=samples, condition_images=conditions, path=os.path.join(self.train_path, f"epoch_{epoch+1}.jpg"))
-        
-        targets_pixel, targets_value, targets_max, targets_min = tensor_to_PIL_range(targets, self.surface_max, self.surface_min)
-        samples_pixel, samples_value, samples_max, samples_min = tensor_to_PIL_range(samples, self.surface_max, self.surface_min)
-        conditions_pixel, conditions_value, conditions_max, conditions_min = tensor_to_PIL_range(conditions, self.side_max, self.side_min)
-        ssim, _, _, _, mae = calculate_metrics(samples_pixel, targets_pixel)
-        save_images_range(target_images=targets_value, target_max=targets_max, target_min=targets_min,
-                        output_images=samples_value, output_max=samples_max, output_min=samples_min,
-                        condition_images=conditions_value, condition_max=conditions_max, condition_min=conditions_min,
+        targets_value, targets_pixel, targets_max, targets_min = tensor_to_PIL_range(targets, self.surface_max, self.surface_min)
+        samples_value, samples_pixel, samples_max, samples_min = tensor_to_PIL_range(samples, self.surface_max, self.surface_min)
+        conditions_value, conditions_pixel, conditions_max, conditions_min = tensor_to_PIL_range(conditions, self.side_max, self.side_min)
+        ssim, _, _, _, mae = calculate_metrics(samples_value, targets_value)
+        save_images_range(target_images=targets_pixel, target_max=targets_max, target_min=targets_min,
+                        output_images=samples_pixel, output_max=samples_max, output_min=samples_min,
+                        condition_images=conditions_pixel, condition_max=conditions_max, condition_min=conditions_min,
                         path=os.path.join(self.train_path, f"epoch_{epoch+1}.jpg"))
+        # save_images(target_images=targets_pixel, output_images=samples_pixel, condition_images=conditions_pixel,
+        #             path=os.path.join(self.train_path, f"epoch_pixel_{epoch+1}.jpg"))
         return np.mean(ssim), np.mean(mae)
 
     def update_ema(self):
@@ -193,7 +190,7 @@ class ModelTrainer:
 
                 if (epoch + 1) % self.sample_epoch == 0:
                     ssim, mae = self.generate_samples(epoch)
-                    logging.info(f"SSIM: {ssim}, MAE: {mae}")
+                    logging.info(f"SSIM: {ssim:.2f}, MAE: {mae:.2f}")
                     if self.ema == False and self.loss == 'l2' and mae < self.best_val_loss:
                         self.best_val_loss = mae
                         self.update_best_model(epoch)

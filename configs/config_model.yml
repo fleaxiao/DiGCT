@@ -5,15 +5,15 @@ default_seed: 20
 input_path: "dataset"
 output_path: "results"
 data_path: "IGCT"
-target_folder: "G"
-condition_folder: "P2S"
-analysis_folder: "A"
+target_folder: "S"
+condition_folder: "PA2S"
+analysis_folder: "PA2S"
 
 # Training settings
 training: True
 generate_images: False
 
-physics_informed: True
+physics_informed: False
 polar_cnn: False
 conditioned_prior: True
 threshold_training: False

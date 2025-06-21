@@ -108,6 +108,7 @@ def calculate_metrics(image_set1: list[Image.Image], image_set2: list[Image.Imag
         mse_mean_values.append(mse_mean)
         mse_max_values.append(mse_max)
 
+        
     return ssim_values, psnr_values, mse_mean_values, mse_max_values, mae_values
 
 def sample_save_metrics(

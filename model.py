@@ -29,7 +29,7 @@ def main(args):
 
     TRAINING = args.training
     GENERATE_IMAGES = args.generate_images
-    PHYSICS_PRIOR = args.physics_prior
+    PHYSICS_INFORMED = args.physics_informed
     POLAR_CNN = args.polar_cnn
     CONDITIONED_PRIOR = args.conditioned_prior
     THRESHOLD_TRAINING = args.threshold_training
@@ -87,7 +87,7 @@ def main(args):
         "n_channels": CHANNELS,
         "resolution": RESOLUTION,
         "clip_grad": CLIP_GRAD,
-        "physics_prior": PHYSICS_PRIOR,
+        "physics_informed": PHYSICS_INFORMED,
         "polar_cnn": POLAR_CNN,
         "conditioned_prior": CONDITIONED_PRIOR,
         "noise_schedule": NOISE_SCHEDULE,
@@ -269,7 +269,7 @@ if __name__ == '__main__':
     p.add_argument('--training', action='store_true', default=False)
     p.add_argument('--generate_images', action='store_true', default=False)
 
-    p.add_argument('--physics_prior', action='store_true', default=False)
+    p.add_argument('--physics_informed', action='store_true', default=False)
     p.add_argument('--polar_cnn', action='store_true', default=False)
     p.add_argument('--conditioned_prior', action='store_true', default=False)
     p.add_argument('--threshold_training', action='store_true', default=False)

@@ -1,8 +1,18 @@
 # Paths
+data_path: "data"
 dataset_path: "dataset"
+
+# Dataset generation options
+surface: False
+side: True
+L2S: False
+P2S: False
+PA2S: True
+G: True
 
 # Image parameters
 image_size: 256
+angle_step: 30
 
 # Mechanical parameters
 F_standard: 45
@@ -26,6 +36,7 @@ Eoff: 15
 R_node_1: 2.5e-3
 R_node_2: 21.5e-3
 R_node_3: 24.5e-3
+L_node: 0.1e-3
 R_heatsink: 67.5e-3
 L_heatsink: 82e-3
 R_spacer: 42.5e-3

@@ -1,7 +1,6 @@
 import os
 import torch
 import pandas as pd
-import torchvision
 import torch.nn as nn
 import re
 import numpy as np
@@ -53,11 +52,10 @@ def save_images(target_images: list[Image]=None, output_images: list[Image]=None
             masked_img = convert_masked_image(img)
             axs[row, col].imshow(masked_img, cmap='jet', vmin=0, vmax=255)
             
-            axs[row, col].axis('off')  # Hide the axes ticks
+            axs[row, col].axis('off')
             if col == 0:
-                axs[row, col].set_title(title, fontweight='bold', size=20, loc = 'left')  # Set the title of the row
+                axs[row, col].set_title(title, fontweight='bold', size=25, loc = 'left', fontname='Times New Roman')
 
-        # Fill remaining columns of the row with blank axes if any
         for extra_col in range(col + 1, n_cols):
             axs[row, extra_col].axis('off')
 
@@ -116,15 +114,13 @@ def save_images_range(target_images: list[Image]=None, target_max: list=None, ta
     n_rows = len(image_data)
     n_cols = max(len(data['images']) for data in image_data)
 
-    fig, axs = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, n_rows * 4), squeeze=False)
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=(n_cols * 2, n_rows * 3), squeeze=False)
 
     for row, data in enumerate(image_data):
         title = data['title']
         images = data['images']
         max_values = data['max_values']
         min_values = data['min_values']
-        print(title)
-        print(max_values, min_values)
 
         for col, img in enumerate(images):
             masked_img = convert_masked_image(img)
@@ -136,19 +132,20 @@ def save_images_range(target_images: list[Image]=None, target_max: list=None, ta
             axs[row, col].axis('off')
 
             if col == 0:
-                axs[row, col].set_title(title, fontweight='bold', size=20, loc='left')
+                axs[row, col].set_title(title, fontweight='bold', size=15, loc='left', fontname='Times New Roman')
 
             range_text = f'Max: {img_max:.2f}\nMin: {img_min:.2f}\n'
             axs[row, col].text(0.5, -0.1, range_text,
                             transform=axs[row, col].transAxes,
                             ha='center', va='top',
-                            fontsize=10)
+                            fontsize=10,
+                            fontname='Times New Roman')
             
         for extra_col in range(len(images), n_cols):
             axs[row, extra_col].axis('off')
 
     plt.tight_layout()
-    plt.subplots_adjust(bottom=0.1)  # 为底部文本留出空间
+    plt.subplots_adjust(bottom=0.1)
     
     if path:
         plt.savefig(path, bbox_inches='tight', **kwargs)
@@ -198,31 +195,31 @@ def tensor_to_PIL_range(tensor: torch.Tensor, max_value: float, min_value: float
     tensor = (tensor.clamp(-1, 1) + 1) / 2
     tensor = tensor.type(torch.float32)
 
-    pixel = (tensor * 255).type(torch.uint8)
-    pixel_images = []
-    for i in range(tensor.shape[0]):
-        image_tensor = pixel[i]
-        if image_tensor.ndim == 4:
-            image_tensor = image_tensor.squeeze(0)  # Remove the batch dimension
-        image = transforms.ToPILImage()(image_tensor)
-        pixel_images.append(image)
-
-    temp = tensor * (max_value - min_value) + min_value
-    temp_max = torch.amax(temp, dim=(1, 2, 3), keepdim=True) 
-    temp_min = torch.amin(temp, dim=(1, 2, 3), keepdim=True) 
-    value = (temp - temp_min) / (temp_max - temp_min)
-
-    value = (value * 255).type(torch.uint8)
+    values = (tensor * 255).type(torch.uint8)
     value_images = []
     for i in range(tensor.shape[0]):
-        image_tensor = value[i]
+        image_tensor = values[i]
         if image_tensor.ndim == 4:
             image_tensor = image_tensor.squeeze(0)  # Remove the batch dimension
         image = transforms.ToPILImage()(image_tensor)
         value_images.append(image)
+
+    temp = tensor * (max_value - min_value) + min_value
+    temp_max = torch.amax(temp, dim=(1, 2, 3), keepdim=True) 
+    temp_min = torch.amin(temp, dim=(1, 2, 3), keepdim=True) 
+    pixels = (temp - temp_min) / (temp_max - temp_min)
+
+    pixels = (pixels * 255).type(torch.uint8)
+    pixel_images = []
+    for i in range(tensor.shape[0]):
+        image_tensor = pixels[i]
+        if image_tensor.ndim == 4:
+            image_tensor = image_tensor.squeeze(0)  # Remove the batch dimension
+        image = transforms.ToPILImage()(image_tensor)
+        pixel_images.append(image)
     temp_max_list = temp_max.squeeze().cpu().numpy().tolist()
     temp_min_list = temp_min.squeeze().cpu().numpy().tolist()
-    return pixel_images, value_images, temp_max_list, temp_min_list
+    return value_images, pixel_images, temp_max_list, temp_min_list
 
 def convert_masked_image(image: Image):
     """
@@ -239,7 +236,7 @@ def convert_masked_image(image: Image):
     h, w = img_array.shape
 
     center_x, center_y = w // 2, h // 2
-    radius = min(w, h) // 2
+    radius = min(w, h) // 2 - 1
 
     y, x = np.ogrid[:h, :w]
     mask = (x - center_x)**2 + (y - center_y)**2 <= radius**2
@@ -254,7 +251,6 @@ def convert_masked_image(image: Image):
     
     masked_img = np.ma.masked_where(~mask, img_array)
     return masked_img
-
 
 def convert_grey_to_white(image: Image, threshold: int = 200):
     """
