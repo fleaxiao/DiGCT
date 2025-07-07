@@ -7,13 +7,11 @@ output_path: "results"
 data_path: "IGCT"
 target_folder: "S"
 condition_folder: "PA2S"
-analysis_folder: "PA2S"
 
 # Training settings
 training: True
-generate_images: False
-
-physics_informed: False
+generate_sample: False
+physics_informed: True
 polar_cnn: False
 conditioned_prior: True
 threshold_training: False
@@ -26,14 +24,14 @@ loss: "l2"
 noise_schedule: "fixed_linear"
 
 # Training parameters
-epochs: 10
+epochs: 500
 noise_steps: 250
 batch_size: 4
-init_lr: 0.0002 # 0.00002
+init_lr: 0.00002
 weight_decay: 0.001
 threshold: 0.01
 sample_number: 5
-sample_epoch: 1
+sample_epoch: 50
 ema_decay: 0.999
 
 # Test settings

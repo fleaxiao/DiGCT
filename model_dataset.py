@@ -58,7 +58,7 @@ def save_ordered_dataset(dataset, indices, path):
 
     save_image_list(images, path)
 
-def get_data(dataset_path: str, target_dataset_path: str, condition_dataset_path: str, analysis_dataset_path: str, result_path: str = None, split: bool = True, **kwargs):
+def get_data(dataset_path: str, target_dataset_path: str, condition_dataset_path: str, result_path: str = None, split: bool = True, **kwargs):
     loss = kwargs.get("loss")
     test_split = kwargs.get("test_split")
     validation_split = kwargs.get("validation_split")
@@ -72,7 +72,7 @@ def get_data(dataset_path: str, target_dataset_path: str, condition_dataset_path
         transforms.Lambda(lambda t: t / 255.0)
     ])
 
-    dataset = LabeledDataset(dataset_path, target_dataset_path, condition_dataset_path, analysis_dataset_path, result_path, physics_informed, data_transform=data_transform)
+    dataset = LabeledDataset(dataset_path, target_dataset_path, condition_dataset_path, result_path, physics_informed, data_transform=data_transform)
 
     if split == True:
         train_size = int((1 - test_split - validation_split) * len(dataset))

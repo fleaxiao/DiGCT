@@ -234,7 +234,7 @@ class DDPM_Tools:
 
     def init_prior_mean_variance(self, dataloader, model_path):
         all_images = []
-        for i, (images, _, _) in enumerate(dataloader):
+        for i, (images, _) in enumerate(dataloader):
             all_images.append(images)
 
         all_images = torch.cat(all_images, dim=0)
@@ -282,7 +282,7 @@ class DDPM_Tools:
         timesteps_tensor = torch.tensor(timesteps, dtype=torch.long).to(self.device)
         return timesteps_tensor.repeat(n)
 
-    def p_sample_loop(self, model, n, c, a, resolution: int):
+    def p_sample_loop(self, model, n, c, resolution: int):
         logging.info(f"Sampling {n} images")
 
         if c.shape[0] != n:
@@ -321,7 +321,7 @@ class DDPM_Tools:
 
         return x, c
 
-    def training_losses(self, model, x_start, c, a, t):
+    def training_losses(self, model, x_start, c, t):
         """
         Calculate the training losses for a single timestep
         Args:

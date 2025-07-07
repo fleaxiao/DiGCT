@@ -25,10 +25,9 @@ def main(args):
     DATA_PATH = args.data_path
     TARGET_FOLDER = args.target_folder
     CONDITION_FOLDER = args.condition_folder
-    ANALYSIS_FOLDER = args.analysis_folder
 
     TRAINING = args.training
-    GENERATE_IMAGES = args.generate_images
+    GENERATE_SAMPLE = args.generate_sample
     PHYSICS_INFORMED = args.physics_informed
     POLAR_CNN = args.polar_cnn
     CONDITIONED_PRIOR = args.conditioned_prior
@@ -65,7 +64,6 @@ def main(args):
     DATASET_PATH = os.path.join(INPUT_PATH, DATA_PATH) 
     TARGET_DATASET_PATH = os.path.join(DATASET_PATH, TARGET_FOLDER)
     CONDITION_DATASET_PATH = os.path.join(DATASET_PATH, CONDITION_FOLDER)
-    ANALYSIS_DATASET_PATH = os.path.join(DATASET_PATH, ANALYSIS_FOLDER)
 
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -104,14 +102,14 @@ def main(args):
 
         ## paths
         RESULT_PATH = os.path.join(OUTPUT_PATH, RUN_NAME)
-        MODEL_PATH = os.path.join(RESULT_PATH, "models")
+        MODEL_PATH = os.path.join(RESULT_PATH, "model")
         TRAIN_PATH = os.path.join(RESULT_PATH, "training")
-        OUTPUT_PATH = os.path.join(RESULT_PATH, "outputs")
-        SAMPLE_PATH = os.path.join(OUTPUT_PATH, "samples")
-        REFERENCE_PATH = os.path.join(OUTPUT_PATH, "references")
-        CONDITION_PATH = os.path.join(OUTPUT_PATH, "conditions")
+        SAMPLE_PATH = os.path.join(RESULT_PATH, "sampling")
+        TARGET_PATH = os.path.join(SAMPLE_PATH, "targets")
+        GENERATION_PATH = os.path.join(SAMPLE_PATH, "generations")
+        CONDITION_PATH = os.path.join(SAMPLE_PATH, "conditions")
 
-        for path in [MODEL_PATH, TRAIN_PATH, OUTPUT_PATH, SAMPLE_PATH, REFERENCE_PATH, CONDITION_PATH]:
+        for path in [MODEL_PATH, TRAIN_PATH, SAMPLE_PATH, TARGET_PATH, GENERATION_PATH, CONDITION_PATH]:
             os.makedirs(path, exist_ok=True)
 
         with open(os.path.join(RESULT_PATH, 'parameters.json'), "w") as f:
@@ -124,7 +122,7 @@ def main(args):
         set_seed(seed=DEFAULT_SEED)
 
         ## dataloader
-        train_dataloader, val_dataloader, test_dataloader, _, _, _ = get_data(dataset_path=DATASET_PATH, target_dataset_path=TARGET_DATASET_PATH, condition_dataset_path=CONDITION_DATASET_PATH, analysis_dataset_path=ANALYSIS_DATASET_PATH, result_path=RESULT_PATH, **parameters)
+        train_dataloader, val_dataloader, test_dataloader, _, _, _ = get_data(dataset_path=DATASET_PATH, target_dataset_path=TARGET_DATASET_PATH, condition_dataset_path=CONDITION_DATASET_PATH, result_path=RESULT_PATH, **parameters)
         
         ## model
         model, diffusion = create_model_diffusion(DEVICE, **parameters)
@@ -202,7 +200,7 @@ def main(args):
         plt.savefig(os.path.join(RESULT_PATH, "results_MAE.png"))
         plt.close()
 
-        if GENERATE_IMAGES == True:
+        if GENERATE_SAMPLE == True:
             if EMA == True:
                 model = trainer.ema_model
             else:
@@ -219,8 +217,8 @@ def main(args):
         PARAMETER_PATH = os.path.join(TEST_PATH, 'parameters.json')
         MODEL_PATH = os.path.join(os.path.join(TEST_PATH, "models"), SAMPLE_MODEL)
         OUTPUT_PATH = os.path.join(TEST_PATH, "outputs")
-        SAMPLE_PATH = os.path.join(OUTPUT_PATH, "samples")
-        REFERENCE_PATH = os.path.join(OUTPUT_PATH, "references")
+        TARGETS_PATH = os.path.join(OUTPUT_PATH, "targets")
+        GENERATION_PATH = os.path.join(OUTPUT_PATH, "generations")
         CONDITION_PATH = os.path.join(OUTPUT_PATH, "conditions")
         TEST_DATASET_PATH = os.path.join(TEST_PATH, "test_indices.pth")
 
@@ -228,9 +226,9 @@ def main(args):
 
         if CALCULATE_METRICS == True:
             condition_images = load_images(CONDITION_PATH)
-            reference_images = load_images(REFERENCE_PATH)
+            target_images = load_images(TARGET_PATH)
             sampled_images = load_images(SAMPLE_PATH)
-            ssim_values, psnr_values, mse_mean_values, mse_max_values, mae_values = calculate_metrics(reference_images[0:1], sampled_images[0:1])
+            ssim_values, psnr_values, mse_mean_values, mse_max_values, mae_values = calculate_metrics(target_images[0:1], sampled_images[0:1])
             print(f"SSIM: {np.mean(ssim_values)}, PSNR: {np.mean(psnr_values)}, MAE: {np.mean(mae_values)}, MSE Mean: {np.mean(mse_mean_values)}, MSE Max: {np.mean(mse_max_values)}")
 
         if SAMPLE_METRICS == True:
@@ -263,11 +261,10 @@ if __name__ == '__main__':
     p.add_argument('--data_path', action='store', type=str, default='IGCT')
     p.add_argument('--target_folder', action='store', type=str, default='target')
     p.add_argument('--condition_folder', action='store', type=str, default='condition')
-    p.add_argument('--analysis_folder', action='store', type=str, default='analysis')
 
     # Training settings
     p.add_argument('--training', action='store_true', default=False)
-    p.add_argument('--generate_images', action='store_true', default=False)
+    p.add_argument('--generate_sample', action='store_true', default=False)
 
     p.add_argument('--physics_informed', action='store_true', default=False)
     p.add_argument('--polar_cnn', action='store_true', default=False)

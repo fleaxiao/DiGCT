@@ -79,8 +79,8 @@ class ModelTrainer:
         self.surface_min = dataset_range["surface_min"].values[0]
         self.side_max = dataset_range["side_max"].values[0]
         self.side_min = dataset_range["side_min"].values[0]
-        self.analysis_max = dataset_range["analysis_max"].values[0]
-        self.analysis_min = dataset_range["analysis_min"].values[0]
+        self.condition_max = dataset_range["condition_max"].values[0]
+        self.condition_min = dataset_range["condition_min"].values[0]
         self.gap_max = dataset_range["gap_max"].values[0]
         self.gap_min = dataset_range["gap_min"].values[0]
 
@@ -89,10 +89,10 @@ class ModelTrainer:
         self.model.train()
         pbar = tqdm(self.train_dataloader)
 
-        for i, (targets, conditions, analyses) in enumerate(pbar):
-            targets, conditions, analyses = targets.to(self.device), conditions.to(self.device), analyses.to(self.device)
+        for i, (targets, conditions) in enumerate(pbar):
+            targets, conditions = targets.to(self.device), conditions.to(self.device)
             t = self.diffusion.sample_timesteps(targets.shape[0]).to(self.device) # l2: [0, 1000(noise step)], vlb: [0, 1)
-            losses = self.diffusion.training_losses(model=self.model, x_start=targets, c=conditions, a=analyses, t=t)
+            losses = self.diffusion.training_losses(model=self.model, x_start=targets, c=conditions, t=t)
             loss = losses["loss"]
             self.optimizer.zero_grad()
             loss.backward()
@@ -116,10 +116,10 @@ class ModelTrainer:
         with torch.no_grad():
             pbar = tqdm(self.val_dataloader)
 
-            for i, (targets, conditions, analyses) in enumerate(pbar):
-                targets, conditions, analyses = targets.to(self.device), conditions.to(self.device), analyses.to(self.device)
+            for i, (targets, conditions) in enumerate(pbar):
+                targets, conditions = targets.to(self.device), conditions.to(self.device)
                 t = self.diffusion.sample_timesteps(targets.shape[0]).to(self.device)
-                losses = self.diffusion.training_losses(model=self.model, x_start=targets, c=conditions, a=analyses, t=t)
+                losses = self.diffusion.training_losses(model=self.model, x_start=targets, c=conditions, t=t)
                 loss = losses["loss"].mean()
 
                 pbar.set_postfix(MSE=loss.item())
@@ -130,24 +130,36 @@ class ModelTrainer:
             return average_loss
 
     def generate_samples(self, epoch):
-        targets, conditions, analyses = next(cycle(self.test_dataloader))
-        targets = concat_to_batchsize(targets, self.sample_number)
-        conditions = conditions.to(self.device)
-        analyses = analyses.to(self.device)
-        conditions = concat_to_batchsize(conditions, self.sample_number)
-        analyses = concat_to_batchsize(analyses, self.sample_number)
-        
+        targets, conditions = next(cycle(self.test_dataloader))
+        targets, conditions = targets.to(self.device), conditions.to(self.device)
+        targets, conditions = concat_to_batchsize(targets, self.sample_number), concat_to_batchsize(conditions, self.sample_number)
+
         if self.ema == True:
-            samples, conditions = self.diffusion.p_sample_loop(self.ema_model, n=self.sample_number, c=conditions, a=analyses, resolution=self.resolution)
+            generations, conditions = self.diffusion.p_sample_loop(self.ema_model, n=self.sample_number, c=conditions, resolution=self.resolution)
         else:
-            samples, conditions = self.diffusion.p_sample_loop(self.model, n=self.sample_number, c=conditions, a=analyses, resolution=self.resolution)
+            generations, conditions = self.diffusion.p_sample_loop(self.model, n=self.sample_number, c=conditions, resolution=self.resolution)
+
+        if self.physics_informed == True:
+            g = ((generations.clamp(-1, 1) + 1) / 2) * (self.gap_max - self.gap_min) + self.gap_min
+            t = ((targets.clamp(-1, 1) + 1) / 2) * (self.gap_max - self.gap_min) + self.gap_min
+            c = ((conditions.clamp(-1, 1) + 1) / 2) * (self.condition_max - self.condition_min) + self.condition_min
+
+            g = g + c
+            t = t + c
+
+            generations = g.clamp(self.surface_min, self.surface_max)
+            generations = (generations - self.surface_min) / (self.surface_max - self.surface_min)
+            generations = ((generations * 2) - 1)
+            targets = t.clamp(self.surface_min, self.surface_max)
+            targets = (targets - self.surface_min) / (self.surface_max - self.surface_min)
+            targets = ((targets * 2) - 1)
 
         targets_value, targets_pixel, targets_max, targets_min = tensor_to_PIL_range(targets, self.surface_max, self.surface_min)
-        samples_value, samples_pixel, samples_max, samples_min = tensor_to_PIL_range(samples, self.surface_max, self.surface_min)
-        conditions_value, conditions_pixel, conditions_max, conditions_min = tensor_to_PIL_range(conditions, self.side_max, self.side_min)
-        ssim, _, _, _, mae = calculate_metrics(samples_value, targets_value)
+        generations_value, generations_pixel, generations_max, generations_min = tensor_to_PIL_range(generations, self.surface_max, self.surface_min)
+        conditions_value, conditions_pixel, conditions_max, conditions_min = tensor_to_PIL_range(conditions, self.condition_max, self.condition_min)
+        ssim, _, _, _, mae = calculate_metrics(generations_value, targets_value)
         save_images_range(target_images=targets_pixel, target_max=targets_max, target_min=targets_min,
-                        output_images=samples_pixel, output_max=samples_max, output_min=samples_min,
+                        generation_images=generations_pixel, generation_max=generations_max, generation_min=generations_min,
                         condition_images=conditions_pixel, condition_max=conditions_max, condition_min=conditions_min,
                         path=os.path.join(self.train_path, f"epoch_{epoch+1}.jpg"))
         # save_images(target_images=targets_pixel, output_images=samples_pixel, condition_images=conditions_pixel,

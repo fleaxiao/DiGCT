@@ -22,13 +22,13 @@ def save_image_list(image_list: list[Image], path: str):
     for i, image in enumerate(image_list):
         image.save(os.path.join(path, f"{i}.png"))
 
-def save_images(target_images: list[Image]=None, output_images: list[Image]=None, condition_images: list[Image]=None, path: str=None, **kwargs):
+def save_images(target_images: list[Image]=None, generation_images: list[Image]=None, condition_images: list[Image]=None, path: str=None, **kwargs):
     """
     Save images in a grid format with titles for each row.
 
     Args:
         target_images (list[Image]): List of target images.
-        output_images (list[Image]): List of output images.
+        generation_images (list[Image]): List of generation images.
         condition_images (list[Image]): List of condition images.
         path (str): Path to save the image grid.
         **kwargs: Additional keyword arguments for plt.savefig.
@@ -36,7 +36,7 @@ def save_images(target_images: list[Image]=None, output_images: list[Image]=None
 
     image_sets_with_titles = {
         'Target': target_images,
-        'Output': output_images,
+        'Generation': generation_images,
         'Condition': condition_images
     }
 
@@ -65,7 +65,7 @@ def save_images(target_images: list[Image]=None, output_images: list[Image]=None
     plt.close()
 
 def save_images_range(target_images: list[Image]=None, target_max: list=None, target_min: list=None,
-                    output_images: list[Image]=None, output_max: list=None, output_min: list=None,
+                    generation_images: list[Image]=None, generation_max: list=None, generation_min: list=None,
                     condition_images: list[Image]=None, condition_max: list=None, condition_min: list=None,
                     path: str=None, **kwargs):
     """
@@ -75,9 +75,9 @@ def save_images_range(target_images: list[Image]=None, target_max: list=None, ta
         target_images (list[Image]): List of target images.
         target_max (list): List of maximum values for target images.
         target_min (list): List of minimum values for target images.
-        output_images (list[Image]): List of output images.
-        output_max (list): List of maximum values for output images.
-        output_min (list): List of minimum values for output images.
+        generation_images (list[Image]): List of generation images.
+        generation_max (list): List of maximum values for generation images.
+        generation_min (list): List of minimum values for generation images.
         condition_images (list[Image]): List of condition images.
         condition_max (list): List of maximum values for condition images.
         condition_min (list): List of minimum values for condition images.
@@ -95,12 +95,12 @@ def save_images_range(target_images: list[Image]=None, target_max: list=None, ta
             'min_values': target_min or [None] * len(target_images)
         })
     
-    if output_images is not None:
+    if generation_images is not None:
         image_data.append({
-            'title': 'Output',
-            'images': output_images,
-            'max_values': output_max or [None] * len(output_images),
-            'min_values': output_min or [None] * len(output_images)
+            'title': 'Generation',
+            'images': generation_images,
+            'max_values': generation_max or [None] * len(generation_images),
+            'min_values': generation_min or [None] * len(generation_images)
         })
     
     if condition_images is not None:

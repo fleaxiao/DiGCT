@@ -128,17 +128,17 @@ def sample_save_metrics(
     resolution = kwargs.get("resolution")
     dataloader = test_dataloader
 
-    sample_path = os.path.join(output_path, "samples")
     target_path = os.path.join(output_path, "targets")
+    generation_path = os.path.join(output_path, "generations")
     condition_path = os.path.join(output_path, "conditions")
 
     parameter_count = count_parameters(model)
-    targets, samples, conditions = sample_model_output(model=model, device=device, sampler=sampler, dataloader=dataloader, length=length, batch_size=batch_size, resolution=resolution)
-    ssim_values, psnr_values, mse_mean_values, mse_max_values, mae_values = calculate_metrics(targets, samples)
+    targets, outputs, conditions = sample_model_output(model=model, device=device, sampler=sampler, dataloader=dataloader, length=length, batch_size=batch_size, resolution=resolution)
+    ssim_values, psnr_values, mse_mean_values, mse_max_values, mae_values = calculate_metrics(targets, outputs)
     print(f"SSIM: {(np.mean(ssim_values)):.2f}, PSNR: {(np.mean(psnr_values)):.2f}, MAE: {(np.mean(mae_values)):.2e}, MSE Mean: {(np.mean(mse_mean_values)):.2e}, MSE Max: {(np.mean(mse_max_values)):.2e}, Parameters: {parameter_count}")
 
     save_image_list(targets, target_path)
-    save_image_list(samples, sample_path)
+    save_image_list(outputs, generation_path)
     save_image_list(conditions, condition_path)
 
 def calculate_error_image(target: Image, sample: Image):
