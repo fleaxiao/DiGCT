@@ -1,28 +1,25 @@
 #!/bin/bash
 
+#SBATCH --job-name=digct
+#SBATCH --output=/home/tue/20234635/DiGCT_Module/DiGCT/results/Outputfiles/Train_%j.txt
+#SBATCH --partition=elec.gpu-es02.q
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus=1
-#SBATCH --partition=gpu
-#SBATCH --mem=30G
 #SBATCH --error=slurm-%j.err
 #SBATCH --output=slurm-%j.out
-#SBATCH --time=9:00:00
+#SBATCH --time=5:00:00
 
-# Load module
+# environment setup
 module purge
-module load 2022
-# module load Python/3.10.4-GCCcore-11.3.0
-# module load PyTorch/1.12.0-foss-2022a-CUDA-11.7.0
-# module load matplotlib/3.5.2-foss-2022a
-
-# module load Anaconda3/2022.05
-# module load CUDA/11.8.0
-# source activate pytorch
-# cd Transformer_image
 source venv/bin/activate
 
 # Python command
-python3 config.py
-
-wait
+rsync -a --exclude='results' /home/tue/20234635/DiGCT_Module/DiGCT $TMPDIR/
+cd $TMPDIR
+pwd
+ls
+cd DiGCT
+ls
+python3 model.py
+rm -rf $TMPDIR

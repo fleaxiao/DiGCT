@@ -116,6 +116,7 @@ def main(args):
             json.dump(parameters, f, indent=4)
         
         print(f"Experiment Name: {RUN_NAME}")
+        print(f"Experiment Device: {DEVICE}")
         print(f"Experiment Time: {datetime.datetime.now()}")
 
         ## seed
