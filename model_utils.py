@@ -6,7 +6,7 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 
-from PIL import Image
+from PIL import Image, ImageDraw
 from torchvision import transforms
 
 
@@ -49,7 +49,7 @@ def save_images(target_images: list[Image]=None, generation_images: list[Image]=
 
     for row, (title, image_set) in enumerate(image_sets):
         for col, img in enumerate(image_set):
-            masked_img = convert_masked_image(img)
+            masked_img = image_add_mask(img)
             axs[row, col].imshow(masked_img, cmap='jet', vmin=0, vmax=255)
             
             axs[row, col].axis('off')
@@ -123,7 +123,7 @@ def save_images_range(target_images: list[Image]=None, target_max: list=None, ta
         min_values = data['min_values']
 
         for col, img in enumerate(images):
-            masked_img = convert_masked_image(img)
+            masked_img = image_add_mask(img)
 
             img_max = max_values[col] 
             img_min = min_values[col] 
@@ -221,35 +221,19 @@ def tensor_to_PIL_range(tensor: torch.Tensor, max_value: float, min_value: float
     temp_min_list = temp_min.squeeze().cpu().numpy().tolist()
     return value_images, pixel_images, temp_max_list, temp_min_list
 
-def convert_masked_image(image: Image):
+def image_add_mask(image: Image) -> Image:
     """
-    Converts an image to a masked image with a circular mask.
+    Add a circular mask to the image to create a circular effect.
 
-    Parameters:
-    - image: The Image to be Converted
-
-    Returns:
-    - masked_img: The masked image with a circular mask applied
+    Args:
+        image: The original image to add the mask.
     """
-    img_array = np.array(image)
+    image_size = image.size[0]
+    mask = Image.new("L", (image_size, image_size), 0)
+    draw = ImageDraw.Draw(mask)
+    draw.ellipse((3, 3, image_size - 3, image_size - 3), fill=255)
 
-    h, w = img_array.shape
-
-    center_x, center_y = w // 2, h // 2
-    radius = min(w, h) // 2 - 1
-
-    y, x = np.ogrid[:h, :w]
-    mask = (x - center_x)**2 + (y - center_y)**2 <= radius**2
-    
-    y, x = np.ogrid[:h, :w]
-    mask = (x - center_x)**2 + (y - center_y)**2 <= radius**2
-    
-    img_rgba = np.zeros((h, w, 2), dtype=img_array.dtype)
-    img_rgba[:, :, 0] = img_array 
-    img_rgba[:, :, 1] = 255 
-    img_rgba[~mask, 1] = 0
-    
-    masked_img = np.ma.masked_where(~mask, img_array)
+    masked_img = np.ma.masked_where(~np.array(mask), np.array(image))
     return masked_img
 
 def convert_grey_to_white(image: Image, threshold: int = 200):
@@ -322,7 +306,7 @@ def set_seed(seed: int, fully_deterministic: bool = False):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    print("Experiment Seed: Set")
+    print("Experiment Seed: set")
 
 def mean_flat(tensor):
     """

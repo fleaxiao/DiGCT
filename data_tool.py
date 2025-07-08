@@ -175,17 +175,18 @@ def s2r_distance(image, list, image_size, r_i, r_o, r_c) -> Image:
                 image.putpixel((x, y), list[distance_index])
     return image
 
-def image_add_mask(image: Image) -> Image:
+def image_add_mask(image: Image, margin: int) -> Image:
     """
     Add a circular mask to the image to create a circular effect.
 
     Args:
-        image: The original image to add the mask to.
+        image: The original image to add the mask.
+        margin: The margin to apply to the mask.
     """
-    image_size = image.size[0]  # Assuming the image is square
+    image_size = image.size[0]
     mask = Image.new("L", (image_size, image_size), 0)
     draw = ImageDraw.Draw(mask)
-    draw.ellipse((1, 1, image_size - 1, image_size - 1), fill=255)
+    draw.ellipse((margin, margin, image_size - margin, image_size - margin), fill=255)
     image.putalpha(mask)
     return image
 
@@ -195,7 +196,7 @@ def image_add_0(image: Image) -> Image:
     Args:
         image: The original image to process.
     """
-    image_size = image.size[0]  # Assuming the image is square
+    image_size = image.size[0]
     center = image_size // 2
     radius = image_size // 2
     for y in range(image_size):
@@ -203,7 +204,7 @@ def image_add_0(image: Image) -> Image:
             dx = x - center
             dy = y - center
             distance = np.sqrt(dx ** 2 + dy ** 2)
-            if distance > radius - 2:
+            if distance > radius - 2: # Allow a small margin
                 image.putpixel((x, y), 0)
     return image
 

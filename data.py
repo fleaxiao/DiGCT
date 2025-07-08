@@ -18,6 +18,7 @@ def data_preprocess(args):
     DATASET_PATH = args.dataset_path
     IMAGE_SIZE = args.image_size
     ANGLE_STEP = args.angle_step
+    MARGIN = args.margin
     os.makedirs(os.path.join(DATASET_PATH, "IGCT"), exist_ok=True)
 
     SURFACE = args.surface
@@ -91,8 +92,8 @@ def data_preprocess(args):
 
                     for angle in range(0, 360, ANGLE_STEP):
                         rotated_img = surface_img.rotate(angle, expand=False)
-                        rotated_img = image_add_0(rotated_img)
-                        rotated_img = image_add_mask(rotated_img)
+                        rotated_img = image_add_0(rotated_img) # critical to deal with the COMOSL generated image
+                        rotated_img = image_add_mask(rotated_img, margin=MARGIN)
 
                         name, ext = os.path.splitext(filename)
                         f_number_match = re.search(r"F_(-?\d+)", name)
@@ -173,7 +174,7 @@ def data_preprocess(args):
                     for angle in range(0, 360, ANGLE_STEP):
                         rotated_img = l2s_image.rotate(angle, expand=False)
                         rotated_img = image_add_0(rotated_img)
-                        rotated_img = image_add_mask(rotated_img)
+                        rotated_img = image_add_mask(rotated_img, margin=MARGIN)
 
                         name, ext = os.path.splitext(filename)
                         f_number_match = re.search(r"F_(-?\d+)", name)
@@ -205,7 +206,7 @@ def data_preprocess(args):
                         p2s_list = smooth_interpolation(p2s_list, IMAGE_SIZE + 1)
                         p2s_image = s2c_angle(None, p2s_list, Tj_pixel, IMAGE_SIZE)
                         p2s_image = image_add_0(p2s_image)
-                        p2s_image = image_add_mask(p2s_image)
+                        p2s_image = image_add_mask(p2s_image, margin=MARGIN)
 
                         name, ext = os.path.splitext(filename)
                         f_number_match = re.search(r"F_(-?\d+)", name)
@@ -246,7 +247,7 @@ def data_preprocess(args):
                         p2s_image = s2r_angle(p2s_image, p2s_list, Tj_pixel * (L_chip - L_node) / L_chip, IMAGE_SIZE, 0, R_node_1, R_chip)
                         p2s_image = s2r_angle(p2s_image, p2s_list, Tj_pixel * (L_chip - L_node) / L_chip, IMAGE_SIZE, R_node_2, R_node_3, R_chip)
                         p2s_image = image_add_0(p2s_image)
-                        p2s_image = image_add_mask(p2s_image)
+                        p2s_image = image_add_mask(p2s_image, margin=MARGIN)
 
                         name, ext = os.path.splitext(filename)
                         f_number_match = re.search(r"F_(-?\d+)", name)
@@ -306,7 +307,7 @@ def data_preprocess(args):
                 Tg_min = round(float(np.min(g_np)), 2)
                 g_np = (g_np - Tg_min) / (Tg_max - Tg_min) * 255.0
                 g_image = Image.fromarray(g_np.astype(np.uint8), mode='L')
-                g_image = image_add_mask(g_image)
+                g_image = image_add_mask(g_image, margin=MARGIN)
 
                 Tg_max_match = re.search(r"Tmax_([\d\.]+)", s_name)
                 if  Tg_max_match:

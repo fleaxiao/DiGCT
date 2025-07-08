@@ -3,7 +3,7 @@ data_path: "data"
 dataset_path: "dataset"
 
 # Dataset generation options
-surface: False
+surface: True
 side: True
 L2S: False
 P2S: False
@@ -13,6 +13,7 @@ G: True
 # Image parameters
 image_size: 256
 angle_step: 30
+margin: 3
 
 # Mechanical parameters
 F_standard: 45

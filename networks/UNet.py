@@ -268,10 +268,10 @@ class UNet(nn.Module):
 
     def forward(self, x_t: torch.Tensor, c: torch.Tensor, t: torch.Tensor):
 
-        x_t_polar = self.cartesian_to_polar(x_t)
-        c_polar = self.cartesian_to_polar(c)
+        # x_t_polar = self.cartesian_to_polar(x_t)
+        # c_polar = self.cartesian_to_polar(c)
         
-        x = torch.cat((x_t_polar, c_polar), dim=1)
+        x = torch.cat((x_t, c), dim=1)
         t = self.time_emb(t)
 
         x = self.image_proj(x)

@@ -24,14 +24,14 @@ loss: "l2"
 noise_schedule: "fixed_linear"
 
 # Training parameters
-epochs: 500
+epochs: 10
 noise_steps: 250
 batch_size: 4
 init_lr: 0.00002
 weight_decay: 0.001
 threshold: 0.01
 sample_number: 5
-sample_epoch: 50
+sample_epoch: 1
 ema_decay: 0.999
 
 # Test settings

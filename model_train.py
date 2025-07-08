@@ -215,7 +215,7 @@ class ModelTrainer:
             epoch = 0
 
             while mae > self.threshold:
-                logging.info(f"Starting epoch {epoch}:")
+                logging.info(f"Epoch {epoch}:")
 
                 logging.info("Starting train loop")
                 self.train_epoch()
