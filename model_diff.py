@@ -335,16 +335,16 @@ class DDPM_Tools:
         """
         x_t, noise = self.noise_images(x_start=x_start, t=t)
         x_t, noise, c = x_t, noise, c
-        model_output = model(x_t, c, t)
+        s = model(x_t, c, t)
 
-        assert model_output.shape == noise.shape == x_start.shape
+        assert s.shape == noise.shape == x_start.shape
 
         # l2 loss
         assert self.loss == "l2"
         mse_loss = nn.MSELoss()
         metrics = {
-            "loss": mse_loss(noise, model_output),
-            "mse": mse_loss(noise, model_output)
+            "loss": mse_loss(noise, s),
+            "mse": mse_loss(noise, s)
         }
 
         return metrics

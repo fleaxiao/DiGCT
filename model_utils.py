@@ -54,7 +54,7 @@ def save_images(target_images: list[Image]=None, generation_images: list[Image]=
             
             axs[row, col].axis('off')
             if col == 0:
-                axs[row, col].set_title(title, fontweight='bold', size=25, loc = 'left', fontname='Times New Roman')
+                axs[row, col].set_title(title, fontweight='bold', size=22, loc = 'left', fontfamily='serif')
 
         for extra_col in range(col + 1, n_cols):
             axs[row, extra_col].axis('off')
@@ -132,14 +132,14 @@ def save_images_range(target_images: list[Image]=None, target_max: list=None, ta
             axs[row, col].axis('off')
 
             if col == 0:
-                axs[row, col].set_title(title, fontweight='bold', size=15, loc='left', fontname='Times New Roman')
+                axs[row, col].set_title(title, fontweight='bold', size=12, loc='left', fontfamily='serif')
 
             range_text = f'Max: {img_max:.2f}\nMin: {img_min:.2f}\n'
             axs[row, col].text(0.5, -0.1, range_text,
                             transform=axs[row, col].transAxes,
                             ha='center', va='top',
                             fontsize=10,
-                            fontname='Times New Roman')
+                            fontfamily='serif')
             
         for extra_col in range(len(images), n_cols):
             axs[row, extra_col].axis('off')
@@ -322,7 +322,7 @@ def set_seed(seed: int, fully_deterministic: bool = False):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    print("Experiment seed set")
+    print("Experiment Seed: Set")
 
 def mean_flat(tensor):
     """

@@ -36,8 +36,8 @@ def create_model(
         return UNet(
             input_channels=2,
             output_channels=1,
-            n_blocks = n_blocks,
-            n_channels = n_channels
+            n_blocks=n_blocks,
+            n_channels=n_channels
         ).to(device)
 
     elif model_name == "ViT":

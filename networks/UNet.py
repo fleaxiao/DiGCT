@@ -190,8 +190,88 @@ class UNet(nn.Module):
         self.act = Swish()
         self.out = nn.Conv2d(in_channels, output_channels, kernel_size=(3, 3), padding=(1, 1))
 
+    def cartesian_to_polar(self, tensor):
+        """Convert cartesian coordinates to polar coordinates for center circular region only
+        
+        Args:
+            tensor: Input tensor with shape (batch, channels, height, width)
+            
+        Returns:
+            Tensor with polar coordinates (r, theta) representation for center circle only
+        """
+        batch_size, channels, height, width = tensor.shape
+        
+        y_coords = torch.arange(height, device=tensor.device, dtype=tensor.dtype).view(1, 1, height, 1).expand(batch_size, channels, height, width)
+        x_coords = torch.arange(width, device=tensor.device, dtype=tensor.dtype).view(1, 1, 1, width).expand(batch_size, channels, height, width)
+        
+        center_y = height // 2
+        center_x = width // 2
+
+        y_centered = y_coords - center_y
+        x_centered = x_coords - center_x
+        distance_from_center = torch.sqrt(x_centered**2 + y_centered**2)
+        
+        max_radius = min(height, width) / 2
+        circular_mask = distance_from_center <= max_radius
+        
+        polar_tensor = tensor.clone()
+        for i in range(height):
+            for j in range(width):
+                if circular_mask[0, 0, i, j]:
+                    y_rel = i - center_y
+                    x_rel = j - center_x
+                    
+                    # Calculate polar coordinates
+                    r = torch.sqrt(x_rel**2 + y_rel**2)
+                    theta = torch.atan2(y_rel, x_rel)
+                    
+                    # Normalize r to [0, 1] range within the circular region
+                    r_normalized = r / max_radius
+                    
+                    # Normalize theta to [0, 1] range (from [-π, π] to [0, 1])
+                    theta_normalized = (theta + math.pi) / (2 * math.pi)
+                    
+                    # Map polar coordinates back to cartesian for sampling
+                    # Use a radial mapping where angle becomes the new x-coordinate
+                    # and normalized radius becomes the new y-coordinate
+                    new_x = theta_normalized * (width - 1)
+                    new_y = r_normalized * (height - 1)
+                    
+                    # Clamp coordinates to valid range
+                    new_x = torch.clamp(new_x, 0, width - 1)
+                    new_y = torch.clamp(new_y, 0, height - 1)
+                    
+                    # Use bilinear interpolation to sample from original tensor
+                    x_floor = torch.floor(new_x).long()
+                    y_floor = torch.floor(new_y).long()
+                    x_ceil = torch.clamp(x_floor + 1, 0, width - 1)
+                    y_ceil = torch.clamp(y_floor + 1, 0, height - 1)
+                    
+                    # Interpolation weights
+                    x_weight = new_x - x_floor.float()
+                    y_weight = new_y - y_floor.float()
+                    
+                    # Bilinear interpolation for all batch items and channels
+                    for b in range(batch_size):
+                        for c in range(channels):
+                            top_left = tensor[b, c, y_floor, x_floor]
+                            top_right = tensor[b, c, y_floor, x_ceil]
+                            bottom_left = tensor[b, c, y_ceil, x_floor]
+                            bottom_right = tensor[b, c, y_ceil, x_ceil]
+                            
+                            top = top_left * (1 - x_weight) + top_right * x_weight
+                            bottom = bottom_left * (1 - x_weight) + bottom_right * x_weight
+                            
+                            polar_tensor[b, c, i, j] = top * (1 - y_weight) + bottom * y_weight
+        
+        return polar_tensor
+
     def forward(self, x_t: torch.Tensor, c: torch.Tensor, t: torch.Tensor):
-        x = torch.cat((x_t, c), dim=1)
+
+        x_t_polar = self.cartesian_to_polar(x_t)
+        c_polar = self.cartesian_to_polar(c)
+        
+        x = torch.cat((x_t_polar, c_polar), dim=1)
         t = self.time_emb(t)
 
         x = self.image_proj(x)

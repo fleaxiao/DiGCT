@@ -103,11 +103,11 @@ def main(args):
         ## paths
         RESULT_PATH = os.path.join(OUTPUT_PATH, RUN_NAME)
         MODEL_PATH = os.path.join(RESULT_PATH, "model")
-        TRAIN_PATH = os.path.join(RESULT_PATH, "training")
-        SAMPLE_PATH = os.path.join(RESULT_PATH, "sampling")
-        TARGET_PATH = os.path.join(SAMPLE_PATH, "targets")
-        GENERATION_PATH = os.path.join(SAMPLE_PATH, "generations")
-        CONDITION_PATH = os.path.join(SAMPLE_PATH, "conditions")
+        TRAIN_PATH = os.path.join(RESULT_PATH, "train")
+        SAMPLE_PATH = os.path.join(RESULT_PATH, "sample")
+        TARGET_PATH = os.path.join(SAMPLE_PATH, "target")
+        GENERATION_PATH = os.path.join(SAMPLE_PATH, "generation")
+        CONDITION_PATH = os.path.join(SAMPLE_PATH, "condition")
 
         for path in [MODEL_PATH, TRAIN_PATH, SAMPLE_PATH, TARGET_PATH, GENERATION_PATH, CONDITION_PATH]:
             os.makedirs(path, exist_ok=True)
@@ -168,10 +168,10 @@ def main(args):
         with open(os.path.join(RESULT_PATH, 'results.json'), "w") as f:
             json.dump(results, f, indent=4)
 
-        np.savez(os.path.join(OUTPUT_PATH, "train_losses.npz"), losses=trainer.train_losses)
-        np.savez(os.path.join(OUTPUT_PATH, "val_losses.npz"), losses=trainer.val_losses)
-        np.savez(os.path.join(OUTPUT_PATH, "ssim_values.npz"), losses=trainer.ssim_values)
-        np.savez(os.path.join(OUTPUT_PATH, "mae_values.npz"), losses=trainer.mae_values)
+        np.savez(os.path.join(RESULT_PATH, "losses_train.npz"), losses=trainer.train_losses)
+        np.savez(os.path.join(RESULT_PATH, "losses_val.npz"), losses=trainer.val_losses)
+        np.savez(os.path.join(RESULT_PATH, "results_ssim.npz"), losses=trainer.ssim_values)
+        np.savez(os.path.join(RESULT_PATH, "results_mae.npz"), losses=trainer.mae_values)
 
         plt.figure(figsize=(12, 6))
         plt.plot(trainer.train_losses[1:], label='Train Loss')
@@ -189,7 +189,7 @@ def main(args):
         plt.xlabel('Epoch')
         plt.ylabel('SSIM')
         plt.title('SSIM over Epochs')
-        plt.savefig(os.path.join(RESULT_PATH, "results_SSIM.png"))
+        plt.savefig(os.path.join(RESULT_PATH, "results_ssim.png"))
         plt.close()
 
         x_values = range(0, len(trainer.mae_values) * SAMPLE_EPOCH, SAMPLE_EPOCH)
@@ -198,7 +198,7 @@ def main(args):
         plt.xlabel('Epoch')
         plt.ylabel('MAE')
         plt.title('MAE over Epochs')
-        plt.savefig(os.path.join(RESULT_PATH, "results_MAE.png"))
+        plt.savefig(os.path.join(RESULT_PATH, "results_mae.png"))
         plt.close()
 
         if GENERATE_SAMPLE == True:
@@ -211,16 +211,16 @@ def main(args):
                                 sampler=trainer.diffusion,
                                 length=(len(test_dataloader) - 1) * BATCH_SIZE, 
                                 test_dataloader=test_dataloader, 
-                                output_path=OUTPUT_PATH, 
+                                sample_path=SAMPLE_PATH, 
                                 **parameters)
 
     if TESTING:
         PARAMETER_PATH = os.path.join(TEST_PATH, 'parameters.json')
         MODEL_PATH = os.path.join(os.path.join(TEST_PATH, "models"), SAMPLE_MODEL)
-        OUTPUT_PATH = os.path.join(TEST_PATH, "outputs")
-        TARGETS_PATH = os.path.join(OUTPUT_PATH, "targets")
-        GENERATION_PATH = os.path.join(OUTPUT_PATH, "generations")
-        CONDITION_PATH = os.path.join(OUTPUT_PATH, "conditions")
+        SAMPLE_PATH = os.path.join(TEST_PATH, "sample")
+        TARGET_PATH = os.path.join(SAMPLE_PATH, "target")
+        GENERATION_PATH = os.path.join(SAMPLE_PATH, "generation")
+        CONDITION_PATH = os.path.join(SAMPLE_PATH, "condition")
         TEST_DATASET_PATH = os.path.join(TEST_PATH, "test_indices.pth")
 
         dataloader, _, _, _, _, _ = get_data(target_dataset_path=TARGET_DATASET_PATH, condition_dataset_path=CONDITION_DATASET_PATH, split=False, **parameters)
@@ -228,8 +228,8 @@ def main(args):
         if CALCULATE_METRICS == True:
             condition_images = load_images(CONDITION_PATH)
             target_images = load_images(TARGET_PATH)
-            sampled_images = load_images(SAMPLE_PATH)
-            ssim_values, psnr_values, mse_mean_values, mse_max_values, mae_values = calculate_metrics(target_images[0:1], sampled_images[0:1])
+            sample_images = load_images(SAMPLE_PATH)
+            ssim_values, psnr_values, mse_mean_values, mse_max_values, mae_values = calculate_metrics(target_images[0:1], sample_images[0:1])
             print(f"SSIM: {np.mean(ssim_values)}, PSNR: {np.mean(psnr_values)}, MAE: {np.mean(mae_values)}, MSE Mean: {np.mean(mse_mean_values)}, MSE Max: {np.mean(mse_max_values)}")
 
         if SAMPLE_METRICS == True:
@@ -246,7 +246,7 @@ def main(args):
                                 sampler=sampler,
                                 length=NR_SAMPLES,
                                 test_dataloader=dataloader,
-                                output_path=OUTPUT_PATH,
+                                sample_path=SAMPLE_PATH,
                                 **parameters)
 
 if __name__ == '__main__':

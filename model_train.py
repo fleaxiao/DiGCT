@@ -186,7 +186,7 @@ class ModelTrainer:
         start_time = time.time()
         if self.threshold_training == False:
             for epoch in range(self.epochs):
-                logging.info(f"Starting epoch {epoch + 1}:")
+                logging.info(f"Epoch {epoch + 1}:")
 
                 logging.info("Starting train loop")
                 self.train_epoch()

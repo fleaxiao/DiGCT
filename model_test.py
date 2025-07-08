@@ -118,7 +118,7 @@ def sample_save_metrics(
         image_dataset_path = None,
         structure_dataset_path = None,
         test_path: str = None,
-        output_path: str = None,
+        sample_path: str = None,
         length: int = 10,
         test_dataloader: DataLoader = None,
         **kwargs
@@ -128,9 +128,9 @@ def sample_save_metrics(
     resolution = kwargs.get("resolution")
     dataloader = test_dataloader
 
-    target_path = os.path.join(output_path, "targets")
-    generation_path = os.path.join(output_path, "generations")
-    condition_path = os.path.join(output_path, "conditions")
+    target_path = os.path.join(sample_path, "targets")
+    generation_path = os.path.join(sample_path, "generations")
+    condition_path = os.path.join(sample_path, "conditions")
 
     parameter_count = count_parameters(model)
     targets, outputs, conditions = sample_model_output(model=model, device=device, sampler=sampler, dataloader=dataloader, length=length, batch_size=batch_size, resolution=resolution)

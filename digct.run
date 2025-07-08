@@ -14,12 +14,14 @@
 module purge
 source venv/bin/activate
 
+# # Python command ($TEMPDIR)
+# rsync -a --exclude='results' /home/tue/20234635/DiGCT_Module/DiGCT $TMPDIR/
+# cd $TMPDIR
+# cd DiGCT
+# python3 model.py
+# rsync -a results/ /home/tue/20234635/DiGCT_Module/DiGCT/results/
+# rm -rf $TMPDIR
+
 # Python command
-rsync -a --exclude='results' /home/tue/20234635/DiGCT_Module/DiGCT $TMPDIR/
-cd $TMPDIR
-pwd
-ls
 cd DiGCT
-ls
 python3 model.py
-rm -rf $TMPDIR
