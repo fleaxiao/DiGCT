@@ -1,9 +1,11 @@
 import math
 import torch
+import numpy as np
+import torch.nn.functional as F
+
 from typing import Optional, Tuple, Union, List
 from torch import nn
 
-import torch.nn.functional as F
 
 class Swish(nn.Module):
     def forward(self, x):
@@ -190,86 +192,85 @@ class UNet(nn.Module):
         self.act = Swish()
         self.out = nn.Conv2d(in_channels, output_channels, kernel_size=(3, 3), padding=(1, 1))
 
-    def cartesian_to_polar(self, tensor):
-        """Convert cartesian coordinates to polar coordinates for center circular region only
+    @ staticmethod
+    def Cartesian2Polar(img_tensor, center=None, max_radius=None):
+        if img_tensor.dim() == 3:
+            img_tensor = img_tensor.unsqueeze(0) 
         
-        Args:
-            tensor: Input tensor with shape (batch, channels, height, width)
-            
-        Returns:
-            Tensor with polar coordinates (r, theta) representation for center circle only
-        """
-        batch_size, channels, height, width = tensor.shape
+        B, C, H, W = img_tensor.shape
         
-        y_coords = torch.arange(height, device=tensor.device, dtype=tensor.dtype).view(1, 1, height, 1).expand(batch_size, channels, height, width)
-        x_coords = torch.arange(width, device=tensor.device, dtype=tensor.dtype).view(1, 1, 1, width).expand(batch_size, channels, height, width)
+        if center is None:
+            center = (W // 2, H // 2)
+        if max_radius is None:
+            max_radius = min(center[0], center[1])
         
-        center_y = height // 2
-        center_x = width // 2
+        theta = torch.linspace(0, 2 * np.pi, W, device=img_tensor.device)
+        r = torch.linspace(0, max_radius, H, device=img_tensor.device)
+        
+        theta_grid, r_grid = torch.meshgrid(theta, r, indexing='ij')
+        theta_grid = theta_grid.T 
+        r_grid = r_grid.T
+        
+        x = center[0] + r_grid * torch.cos(theta_grid)
+        y = center[1] + r_grid * torch.sin(theta_grid)
 
-        y_centered = y_coords - center_y
-        x_centered = x_coords - center_x
-        distance_from_center = torch.sqrt(x_centered**2 + y_centered**2)
+        x = 2 * x / (W - 1) - 1
+        y = 2 * y / (H - 1) - 1
         
-        max_radius = min(height, width) / 2
-        circular_mask = distance_from_center <= max_radius
+        grid = torch.stack([x, y], dim=-1).unsqueeze(0).repeat(B, 1, 1, 1)
+        polar_img = F.grid_sample(img_tensor, grid, mode='bilinear', padding_mode='zeros', align_corners=True)
         
-        polar_tensor = tensor.clone()
-        for i in range(height):
-            for j in range(width):
-                if circular_mask[0, 0, i, j]:
-                    y_rel = i - center_y
-                    x_rel = j - center_x
-                    
-                    # Calculate polar coordinates
-                    r = torch.sqrt(x_rel**2 + y_rel**2)
-                    theta = torch.atan2(y_rel, x_rel)
-                    
-                    # Normalize r to [0, 1] range within the circular region
-                    r_normalized = r / max_radius
-                    
-                    # Normalize theta to [0, 1] range (from [-π, π] to [0, 1])
-                    theta_normalized = (theta + math.pi) / (2 * math.pi)
-                    
-                    # Map polar coordinates back to cartesian for sampling
-                    # Use a radial mapping where angle becomes the new x-coordinate
-                    # and normalized radius becomes the new y-coordinate
-                    new_x = theta_normalized * (width - 1)
-                    new_y = r_normalized * (height - 1)
-                    
-                    # Clamp coordinates to valid range
-                    new_x = torch.clamp(new_x, 0, width - 1)
-                    new_y = torch.clamp(new_y, 0, height - 1)
-                    
-                    # Use bilinear interpolation to sample from original tensor
-                    x_floor = torch.floor(new_x).long()
-                    y_floor = torch.floor(new_y).long()
-                    x_ceil = torch.clamp(x_floor + 1, 0, width - 1)
-                    y_ceil = torch.clamp(y_floor + 1, 0, height - 1)
-                    
-                    # Interpolation weights
-                    x_weight = new_x - x_floor.float()
-                    y_weight = new_y - y_floor.float()
-                    
-                    # Bilinear interpolation for all batch items and channels
-                    for b in range(batch_size):
-                        for c in range(channels):
-                            top_left = tensor[b, c, y_floor, x_floor]
-                            top_right = tensor[b, c, y_floor, x_ceil]
-                            bottom_left = tensor[b, c, y_ceil, x_floor]
-                            bottom_right = tensor[b, c, y_ceil, x_ceil]
-                            
-                            top = top_left * (1 - x_weight) + top_right * x_weight
-                            bottom = bottom_left * (1 - x_weight) + bottom_right * x_weight
-                            
-                            polar_tensor[b, c, i, j] = top * (1 - y_weight) + bottom * y_weight
+        return polar_img.squeeze(0) if polar_img.shape[0] == 1 else polar_img
+
+    @ staticmethod
+    def Polar2Cartesian(polar_tensor, center=None, max_radius=None):
+        if polar_tensor.dim() == 3:
+            polar_tensor = polar_tensor.unsqueeze(0) 
         
-        return polar_tensor
+        B, C, H, W = polar_tensor.shape
+        
+        if center is None:
+            center = (W // 2, H // 2)
+        if max_radius is None:
+            max_radius = min(center[0], center[1])
+        
+        x = torch.linspace(0, W - 1, W, device=polar_tensor.device)
+        y = torch.linspace(0, H - 1, H, device=polar_tensor.device)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing='ij')
+        x_grid = x_grid.T
+        y_grid = y_grid.T
+        
+        dx = x_grid - center[0]
+        dy = y_grid - center[1]
+        
+        r = torch.sqrt(dx**2 + dy**2)
+        theta = torch.atan2(dy, dx)
+        theta = torch.where(theta < 0, theta + 2 * np.pi, theta)
+        
+        r_coord = r * (H - 1) / max_radius
+        theta_coord = theta * (W - 1) / (2 * np.pi)
+        
+        r_coord_norm = 2 * r_coord / (H - 1) - 1
+        theta_coord_norm = 2 * theta_coord / (W - 1) - 1
+        r_coord_norm = torch.clamp(r_coord_norm, -1, 1)
+        theta_coord_norm = torch.clamp(theta_coord_norm, -1, 1)
+        
+        grid = torch.stack([theta_coord_norm, r_coord_norm], dim=-1).unsqueeze(0).repeat(B, 1, 1, 1)
+        cartesian_img = F.grid_sample(polar_tensor, grid, mode='bilinear', padding_mode='zeros', align_corners=True)
+        
+        valid_mask = r <= max_radius
+        valid_mask = valid_mask.unsqueeze(0).unsqueeze(0).repeat(B, C, 1, 1)
+        fill_value = torch.full_like(cartesian_img, -1.0)
+        cartesian_img = torch.where(valid_mask, cartesian_img, fill_value)
+        # cartesian_img = cartesian_img * valid_mask.float()
+        
+        return cartesian_img.squeeze(0) if cartesian_img.shape[0] == 1 else cartesian_img
+
 
     def forward(self, x_t: torch.Tensor, c: torch.Tensor, t: torch.Tensor):
-
-        # x_t_polar = self.cartesian_to_polar(x_t)
-        # c_polar = self.cartesian_to_polar(c)
+        # # Convert Cartesian coordinates to Polar coordinates
+        # x_t = self.Cartesian2Polar(x_t)
+        # c = self.Cartesian2Polar(c)
         
         x = torch.cat((x_t, c), dim=1)
         t = self.time_emb(t)
@@ -288,7 +289,12 @@ class UNet(nn.Module):
             else:
                 x = block(torch.cat([x, h.pop()], dim=1), t)
 
-        return self.out(self.act(self.norm(x)))
+        x = self.out(self.act(self.norm(x)))
+
+        # # Convert Polar coordinates back to Cartesian coordinates
+        # x = self.Polar2Cartesian(x)
+
+        return x
 
 
 

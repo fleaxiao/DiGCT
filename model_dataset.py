@@ -3,11 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 from skimage.metrics import structural_similarity as ssim
-from model_utils import *
 
 from model_dataclass import LabeledDataset
+from model_utils import *
 
 
 def normalize_softmax(x):

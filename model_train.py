@@ -1,9 +1,9 @@
 import copy
 import os
 import torch
-import time
 import torch.nn as nn
 import numpy as np
+import pandas as pd
 import logging
 
 from torch import optim
@@ -87,7 +87,7 @@ class ModelTrainer:
     def train_epoch(self):
         loss_total = 0
         self.model.train()
-        pbar = tqdm(self.train_dataloader)
+        pbar = tqdm(self.train_dataloader, desc="training loop", leave=False)
 
         for i, (targets, conditions) in enumerate(pbar):
             targets, conditions = targets.to(self.device), conditions.to(self.device)
@@ -104,7 +104,7 @@ class ModelTrainer:
                 self.update_ema()
 
             loss_total += loss.item()
-            pbar.set_postfix(MSE=loss.item())
+            pbar.set_postfix(loss=loss.item())
 
         average_loss = loss_total / len(self.train_dataloader)
         self.train_losses.append(average_loss)
@@ -114,7 +114,7 @@ class ModelTrainer:
         self.model.eval()
 
         with torch.no_grad():
-            pbar = tqdm(self.val_dataloader)
+            pbar = tqdm(self.val_dataloader, desc="validation loop", leave=False)
 
             for i, (targets, conditions) in enumerate(pbar):
                 targets, conditions = targets.to(self.device), conditions.to(self.device)
@@ -122,7 +122,7 @@ class ModelTrainer:
                 losses = self.diffusion.training_losses(model=self.model, x_start=targets, c=conditions, t=t)
                 loss = losses["loss"].mean()
 
-                pbar.set_postfix(MSE=loss.item())
+                pbar.set_postfix(loss=loss.item())
                 loss_total += loss.item()
 
             average_loss = loss_total / len(self.val_dataloader)
@@ -178,23 +178,20 @@ class ModelTrainer:
         torch.save(self.best_model_checkpoint, os.path.join(self.model_path, "best_model.pth"))
 
     def train(self):
-        logging.info(f"Starting training on {self.device}")
+        logging.info(f"Training ...")
         self.model.to(self.device)
         if self.diffusion.conditioned_prior == True:
             self.diffusion.init_prior_mean_variance(self.train_dataloader, self.model_path)
-            logging.info("Initialized prior mean and variance")
-        start_time = time.time()
+            logging.info("Initialize prior mean and variance")
+
         if self.threshold_training == False:
             for epoch in range(self.epochs):
-                logging.info(f"Epoch {epoch + 1}:")
-
-                logging.info("Starting train loop")
+ 
                 self.train_epoch()
-
-                logging.info("Starting validation loop")
                 val_loss = self.validation_epoch()
 
-                save_loss_image(train_loss=self.train_losses, val_loss=self.val_losses, path=os.path.join(self.train_path, "training_losses.png"))
+                logging.info(f"Epoch: {epoch + 1} Train Loss: {self.train_losses[-1]:.4f} Val Loss: {val_loss:.4f}")
+                save_loss_image(train_loss=self.train_losses, val_loss=self.val_losses, path=os.path.join(self.train_path, "losses.png"))
 
                 if val_loss < self.best_val_loss and self.ema == True:
                     self.best_val_loss = val_loss
@@ -202,7 +199,7 @@ class ModelTrainer:
 
                 if (epoch + 1) % self.sample_epoch == 0:
                     ssim, mae = self.generate_samples(epoch)
-                    logging.info(f"SSIM: {ssim:.2f}, MAE: {mae:.2f}")
+                    logging.info(f"Epoch: {epoch + 1} SSIM: {ssim:.2f} MAE: {mae:.2f}")
                     if self.ema == False and self.loss == 'l2' and mae < self.best_val_loss:
                         self.best_val_loss = mae
                         self.update_best_model(epoch)
@@ -231,6 +228,3 @@ class ModelTrainer:
                 if (epoch + 1) % self.sample_epoch == 0:
                     ssim, mae = self.generate_samples(epoch)
                 epoch += 1
-
-        end_time = time.time()
-        logging.info(f"Training took {(end_time - start_time):.2f} seconds")

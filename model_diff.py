@@ -1,6 +1,6 @@
 import torch
-import numpy as np
 import logging
+import numpy as np
 import torch.nn.functional as F
 
 from torch import allclose, argmax, autograd, exp, linspace, nn, sigmoid, sqrt
@@ -283,7 +283,7 @@ class DDPM_Tools:
         return timesteps_tensor.repeat(n)
 
     def p_sample_loop(self, model, n, c, resolution: int):
-        logging.info(f"Sampling {n} images")
+        logging.info(f"Generating ...")
 
         if c.shape[0] != n:
             c = concat_to_batchsize(c, n)
@@ -299,7 +299,9 @@ class DDPM_Tools:
             #     x = x * torch.sqrt(variance)
             c.to(self.device)
 
-            for i in tqdm(reversed(range(1, self.noise_steps)), position=0):
+            steps = list(reversed(range(1, self.noise_steps)))
+            pbar = tqdm(steps, leave=False)
+            for i in pbar:
                 t = (torch.ones(n) * i).long().to(self.device)
                 predicted_noise = model(x, c, t)
 
@@ -314,8 +316,8 @@ class DDPM_Tools:
                     x = (1 / torch.sqrt(alpha) * (x- ((1 - alpha)/ (torch.sqrt(1-alpha_hat))) * predicted_noise) + torch.sqrt(beta) * noise)
                 else:
                     x = (1 / torch.sqrt(alpha) * (x- ((1 - alpha)/ (torch.sqrt(1-alpha_hat))) * predicted_noise))
-                    
         model.train()
+
         if self.conditioned_prior == True:
             x = x + mean
 

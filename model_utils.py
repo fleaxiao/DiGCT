@@ -1,8 +1,6 @@
 import os
-import torch
-import pandas as pd
-import torch.nn as nn
 import re
+import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -54,7 +52,7 @@ def save_images(target_images: list[Image]=None, generation_images: list[Image]=
             
             axs[row, col].axis('off')
             if col == 0:
-                axs[row, col].set_title(title, fontweight='bold', size=22, loc = 'left', fontfamily='serif')
+                axs[row, col].set_title(title, fontweight='bold', size=22, loc = 'left')
 
         for extra_col in range(col + 1, n_cols):
             axs[row, extra_col].axis('off')
@@ -132,14 +130,13 @@ def save_images_range(target_images: list[Image]=None, target_max: list=None, ta
             axs[row, col].axis('off')
 
             if col == 0:
-                axs[row, col].set_title(title, fontweight='bold', size=12, loc='left', fontfamily='serif')
+                axs[row, col].set_title(title, fontweight='bold', size=12, loc='left')
 
             range_text = f'Max: {img_max:.2f}\nMin: {img_min:.2f}\n'
             axs[row, col].text(0.5, -0.1, range_text,
                             transform=axs[row, col].transAxes,
                             ha='center', va='top',
-                            fontsize=10,
-                            fontfamily='serif')
+                            fontsize=10)
             
         for extra_col in range(len(images), n_cols):
             axs[row, extra_col].axis('off')
@@ -154,12 +151,34 @@ def save_images_range(target_images: list[Image]=None, target_max: list=None, ta
 def save_loss_image(train_loss: list[float], val_loss: list[float], path: str):
     plt.figure(figsize=(12, 6))
     epochs = range(1, len(train_loss) + 1)
+
     plt.plot(epochs, train_loss, label='Train Loss')
     plt.plot(epochs, val_loss, label='Validation Loss')
-    plt.legend()
-    plt.xlabel('Epoch')
-    plt.ylabel('MSE')
-    plt.title('Loss over Epochs')
+
+    plt.legend(fontsize=12)
+    plt.xlabel('Epoch', fontsize=12)
+    plt.ylabel('MSE', fontsize=12)
+    plt.title('Losses', fontsize=14, fontweight='bold')
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    plt.savefig(path)
+    plt.close()
+
+def save_line_chart(data: list[float], sample_epoch: list[int], title: str, path: str):
+    x_values = range(sample_epoch, (len(data) + 1) * sample_epoch, sample_epoch)
+    plt.figure(figsize=(12, 6))
+    plt.plot(x_values, data, label=title, marker='o', linestyle='-')
+    plt.xlabel('Epoch', fontsize=12)
+    plt.ylabel(title, fontsize=12)
+    plt.title(title, fontsize=14, fontweight='bold')
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+
     plt.savefig(path)
     plt.close()
 
@@ -306,7 +325,6 @@ def set_seed(seed: int, fully_deterministic: bool = False):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    print("Experiment Seed: set")
 
 def mean_flat(tensor):
     """

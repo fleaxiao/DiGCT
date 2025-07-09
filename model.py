@@ -7,12 +7,11 @@ import datetime
 import numpy as np
 
 from torch import optim
-from matplotlib import pyplot as plt
 
 from model_train import ModelTrainer
 from model_dataset import get_data
 from model_test import sample_model_output, calculate_metrics, sample_save_metrics
-from model_utils import save_image_list, set_seed, load_images, tensor_to_PIL
+from model_utils import save_line_chart, set_seed, load_images
 from model_model import create_model_diffusion
 
 
@@ -116,11 +115,13 @@ def main(args):
             json.dump(parameters, f, indent=4)
         
         print(f"Experiment Name: {RUN_NAME}")
+        start_time = datetime.datetime.now()
+        print(f"Experiment Starting Time: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"Experiment Device: {DEVICE}")
-        print(f"Experiment Time: {datetime.datetime.now()}")
 
         ## seed
         set_seed(seed=DEFAULT_SEED)
+        print("Experiment Seed: set\n")
 
         ## dataloader
         train_dataloader, val_dataloader, test_dataloader, _, _, _ = get_data(dataset_path=DATASET_PATH, target_dataset_path=TARGET_DATASET_PATH, condition_dataset_path=CONDITION_DATASET_PATH, result_path=RESULT_PATH, **parameters)
@@ -155,9 +156,15 @@ def main(args):
 
         max_ssim = max(trainer.ssim_values)
         min_mae = min(trainer.mae_values)
-        print(f"Max SSIM: {max_ssim} during sampling. (epoch: {SAMPLE_EPOCH * (np.argmax(trainer.ssim_values) + 1)})")
-        print(f"Min MAE: {min_mae} during sampling, (epoch: {SAMPLE_EPOCH * (np.argmin(trainer.mae_values) + 1)})")
-        print(f"Best Model (epoch: {trainer.best_model_epoch + 1})")
+        print(f"\nMax SSIM: {max_ssim:.4f} (epoch: {SAMPLE_EPOCH * (np.argmax(trainer.ssim_values) + 1)})")
+        print(f"Min MAE: {min_mae:.4f} (epoch: {SAMPLE_EPOCH * (np.argmin(trainer.mae_values) + 1)})")
+        print(f"Min Val Loss: {trainer.best_val_loss:.4f} -> Best Model (epoch: {trainer.best_model_epoch + 1})")
+
+        end_time = datetime.datetime.now()
+        print(f"\nExperiment Name: {RUN_NAME}")
+        print(f"Experiment Ending Time: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"Experiment Duration: {(end_time - start_time).total_seconds() / 60:.2f} minutes")
+
         results = {
             "max SSIM": float(max_ssim),
             "max SSIM epoch": int(SAMPLE_EPOCH * (np.argmax(trainer.ssim_values) + 1)),
@@ -170,49 +177,18 @@ def main(args):
 
         np.savez(os.path.join(RESULT_PATH, "losses_train.npz"), losses=trainer.train_losses)
         np.savez(os.path.join(RESULT_PATH, "losses_val.npz"), losses=trainer.val_losses)
-        np.savez(os.path.join(RESULT_PATH, "results_ssim.npz"), losses=trainer.ssim_values)
-        np.savez(os.path.join(RESULT_PATH, "results_mae.npz"), losses=trainer.mae_values)
+        np.savez(os.path.join(RESULT_PATH, "results_ssim.npz"), ssim=trainer.ssim_values)
+        np.savez(os.path.join(RESULT_PATH, "results_mae.npz"), mae=trainer.mae_values)
 
-        plt.figure(figsize=(12, 6))
-        plt.plot(trainer.train_losses[1:], label='Train Loss')
-        plt.plot(trainer.val_losses[1:], label='Validation Loss')
-        plt.legend()
-        plt.xlabel('Epoch')
-        plt.ylabel('MSE')
-        plt.title('Loss over Epochs')
-        plt.savefig(os.path.join(RESULT_PATH, "results_losses.png"))
-        plt.close()
-
-        x_values = range(0, len(trainer.ssim_values) * SAMPLE_EPOCH, SAMPLE_EPOCH)
-        plt.figure(figsize=(12, 6))
-        plt.plot(x_values, trainer.ssim_values, label='SSIM')
-        plt.xlabel('Epoch')
-        plt.ylabel('SSIM')
-        plt.title('SSIM over Epochs')
-        plt.savefig(os.path.join(RESULT_PATH, "results_ssim.png"))
-        plt.close()
-
-        x_values = range(0, len(trainer.mae_values) * SAMPLE_EPOCH, SAMPLE_EPOCH)
-        plt.figure(figsize=(12, 6))
-        plt.plot(x_values, trainer.mae_values, label='MAE')
-        plt.xlabel('Epoch')
-        plt.ylabel('MAE')
-        plt.title('MAE over Epochs')
-        plt.savefig(os.path.join(RESULT_PATH, "results_mae.png"))
-        plt.close()
+        save_line_chart(data = trainer.ssim_values, sample_epoch = SAMPLE_EPOCH, title = 'SSIM', path = os.path.join(RESULT_PATH, "results_ssim.png"))
+        save_line_chart(data = trainer.mae_values, sample_epoch = SAMPLE_EPOCH, title = 'MAE', path = os.path.join(RESULT_PATH, "results_mae.png"))
 
         if GENERATE_SAMPLE == True:
             if EMA == True:
                 model = trainer.ema_model
             else:
                 model.load_state_dict(trainer.best_model_checkpoint)
-            sample_save_metrics(model=model, 
-                                device=DEVICE,
-                                sampler=trainer.diffusion,
-                                length=(len(test_dataloader) - 1) * BATCH_SIZE, 
-                                test_dataloader=test_dataloader, 
-                                sample_path=SAMPLE_PATH, 
-                                **parameters)
+            sample_save_metrics(model=model, device=DEVICE, sampler=trainer.diffusion, length=(len(test_dataloader) - 1) * BATCH_SIZE,                    test_dataloader=test_dataloader, sample_path=SAMPLE_PATH, **parameters)
 
     if TESTING:
         PARAMETER_PATH = os.path.join(TEST_PATH, 'parameters.json')
@@ -241,13 +217,7 @@ def main(args):
             model, sampler = create_model_diffusion(DEVICE, **parameters)
             sampler.load_prior_mean_variance(os.path.join(TEST_PATH, "models"))
             model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
-            sample_save_metrics(model=model,
-                                device=DEVICE,
-                                sampler=sampler,
-                                length=NR_SAMPLES,
-                                test_dataloader=dataloader,
-                                sample_path=SAMPLE_PATH,
-                                **parameters)
+            sample_save_metrics(model=model, device=DEVICE,sampler=sampler, length=NR_SAMPLES, test_dataloader=dataloader,                     sample_path=SAMPLE_PATH, **parameters)
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description='PCBCopilot')

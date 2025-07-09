@@ -55,10 +55,10 @@ class LabeledDataset(Dataset):
         self.condition_min = t_range["analysis_min (°C)"].min()
         self.gap_max = t_range["gap_max (°C)"].max()
         self.gap_min = t_range["gap_min (°C)"].min()
-        print(f"Surface temperature range: {self.surface_min}°C to {self.surface_max}°C")
-        print(f"Side temperature range: {self.side_min}°C to {self.side_max}°C")
-        print(f"Condition temperature range: {self.condition_min}°C to {self.condition_max}°C")
-        print(f"Gap temperature range: {self.gap_min}°C to {self.gap_max}°C")
+        # print(f"Surface temperature range: {self.surface_min}°C to {self.surface_max}°C")
+        # print(f"Side temperature range: {self.side_min}°C to {self.side_max}°C")
+        # print(f"Condition temperature range: {self.condition_min}°C to {self.condition_max}°C")
+        # print(f"Gap temperature range: {self.gap_min}°C to {self.gap_max}°C")
         
         if result_dir is not None:
             os.makedirs(result_dir, exist_ok=True)
