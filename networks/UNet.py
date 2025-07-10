@@ -192,7 +192,7 @@ class UNet(nn.Module):
         self.act = Swish()
         self.out = nn.Conv2d(in_channels, output_channels, kernel_size=(3, 3), padding=(1, 1))
 
-    @ staticmethod
+    @staticmethod
     def Cartesian2Polar(img_tensor, center=None, max_radius=None):
         if img_tensor.dim() == 3:
             img_tensor = img_tensor.unsqueeze(0) 
@@ -222,7 +222,7 @@ class UNet(nn.Module):
         
         return polar_img.squeeze(0) if polar_img.shape[0] == 1 else polar_img
 
-    @ staticmethod
+    @staticmethod
     def Polar2Cartesian(polar_tensor, center=None, max_radius=None):
         if polar_tensor.dim() == 3:
             polar_tensor = polar_tensor.unsqueeze(0) 
@@ -262,12 +262,16 @@ class UNet(nn.Module):
         valid_mask = valid_mask.unsqueeze(0).unsqueeze(0).repeat(B, C, 1, 1)
         fill_value = torch.full_like(cartesian_img, -1.0)
         cartesian_img = torch.where(valid_mask, cartesian_img, fill_value)
+        # cartesian_img = cartesian_img * valid_mask.float()
         
         return cartesian_img.squeeze(0) if cartesian_img.shape[0] == 1 else cartesian_img
 
 
     def forward(self, x_t: torch.Tensor, c: torch.Tensor, t: torch.Tensor):
-      
+        # Convert Cartesian coordinates to Polar coordinates
+        x_t = self.Cartesian2Polar(x_t)
+        c = self.Cartesian2Polar(c)
+        
         x = torch.cat((x_t, c), dim=1)
         t = self.time_emb(t)
 
@@ -287,14 +291,7 @@ class UNet(nn.Module):
 
         x = self.out(self.act(self.norm(x)))
 
+        # Convert Polar coordinates back to Cartesian coordinates
+        x = self.Polar2Cartesian(x)
+
         return x
-
-
-
-
-
-
-
-
-
-
