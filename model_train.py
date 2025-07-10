@@ -186,7 +186,7 @@ class ModelTrainer:
 
         if self.threshold_training == False:
             for epoch in range(self.epochs):
- 
+
                 self.train_epoch()
                 val_loss = self.validation_epoch()
 

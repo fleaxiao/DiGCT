@@ -204,7 +204,7 @@ class UNet(nn.Module):
         if max_radius is None:
             max_radius = min(center[0], center[1])
         
-        theta = torch.linspace(0, 2 * np.pi, W, device=img_tensor.device)
+        theta = torch.linspace(0, 2 * math.pi, W, device=img_tensor.device)
         r = torch.linspace(0, max_radius, H, device=img_tensor.device)
         
         theta_grid, r_grid = torch.meshgrid(theta, r, indexing='ij')
