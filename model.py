@@ -217,7 +217,7 @@ def main(args):
             model, sampler = create_model_diffusion(DEVICE, **parameters)
             sampler.load_prior_mean_variance(os.path.join(TEST_PATH, "models"))
             model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
-            sample_save_metrics(model=model, device=DEVICE,sampler=sampler, length=NR_SAMPLES, test_dataloader=dataloader,                     sample_path=SAMPLE_PATH, **parameters)
+            sample_save_metrics(model=model, device=DEVICE,sampler=sampler, length=NR_SAMPLES, test_dataloader=dataloader, sample_path=SAMPLE_PATH, **parameters)
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description='PCBCopilot')

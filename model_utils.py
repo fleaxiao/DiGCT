@@ -121,12 +121,12 @@ def save_images_range(target_images: list[Image]=None, target_max: list=None, ta
         min_values = data['min_values']
 
         for col, img in enumerate(images):
-            masked_img = image_add_mask(img)
+            # masked_img = image_add_mask(img)
 
             img_max = max_values[col] 
             img_min = min_values[col] 
 
-            axs[row, col].imshow(masked_img, cmap='jet', vmin=0, vmax=255)
+            axs[row, col].imshow(img, cmap='jet', vmin=0, vmax=255)
             axs[row, col].axis('off')
 
             if col == 0:
@@ -219,7 +219,7 @@ def tensor_to_PIL_range(tensor: torch.Tensor, max_value: float, min_value: float
     for i in range(tensor.shape[0]):
         image_tensor = values[i]
         if image_tensor.ndim == 4:
-            image_tensor = image_tensor.squeeze(0)  # Remove the batch dimension
+            image_tensor = image_tensor.squeeze(0)
         image = transforms.ToPILImage()(image_tensor)
         value_images.append(image)
 
@@ -233,7 +233,7 @@ def tensor_to_PIL_range(tensor: torch.Tensor, max_value: float, min_value: float
     for i in range(tensor.shape[0]):
         image_tensor = pixels[i]
         if image_tensor.ndim == 4:
-            image_tensor = image_tensor.squeeze(0)  # Remove the batch dimension
+            image_tensor = image_tensor.squeeze(0)
         image = transforms.ToPILImage()(image_tensor)
         pixel_images.append(image)
     temp_max_list = temp_max.squeeze().cpu().numpy().tolist()
