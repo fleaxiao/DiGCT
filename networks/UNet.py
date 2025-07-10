@@ -268,10 +268,7 @@ class UNet(nn.Module):
 
 
     def forward(self, x_t: torch.Tensor, c: torch.Tensor, t: torch.Tensor):
-        # Convert Cartesian coordinates to Polar coordinates
-        x_t = self.Cartesian2Polar(x_t)
-        c = self.Cartesian2Polar(c)
-        
+       
         x = torch.cat((x_t, c), dim=1)
         t = self.time_emb(t)
 
@@ -290,8 +287,5 @@ class UNet(nn.Module):
                 x = block(torch.cat([x, h.pop()], dim=1), t)
 
         x = self.out(self.act(self.norm(x)))
-
-        # Convert Polar coordinates back to Cartesian coordinates
-        x = self.Polar2Cartesian(x)
 
         return x

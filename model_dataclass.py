@@ -124,7 +124,7 @@ class LabeledDataset(Dataset):
 
         return t_image, c_image
     
-    @ staticmethod
+    @staticmethod
     def Cartesian2Polar(img_tensor, center=None, max_radius=None):
         if img_tensor.dim() == 3:
             img_tensor = img_tensor.unsqueeze(0) 
@@ -157,7 +157,7 @@ class LabeledDataset(Dataset):
         
         return polar_img.squeeze(0) if polar_img.shape[0] == 1 else polar_img, img_max, img_min
 
-    @ staticmethod
+    @staticmethod
     def Polar2Cartesian(polar_tensor, center=None, max_radius=None, polar_max=None, polar_min=None):
         if polar_tensor.dim() == 3:
             polar_tensor = polar_tensor.unsqueeze(0) 

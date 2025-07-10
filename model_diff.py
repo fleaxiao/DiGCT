@@ -351,7 +351,7 @@ class DDPM_Tools:
     def prior_to_batchsize(self, prior, batchsize):
         return prior.unsqueeze(0).expand(batchsize, *prior.shape).to(self.device)
     
-    @ staticmethod
+    @staticmethod
     def Cartesian2Polar(img_tensor, center=None, max_radius=None):
         if img_tensor.dim() == 3:
             img_tensor = img_tensor.unsqueeze(0) 
@@ -384,7 +384,7 @@ class DDPM_Tools:
         
         return polar_img.squeeze(0) if polar_img.shape[0] == 1 else polar_img, img_max, img_min
 
-    @ staticmethod
+    @staticmethod
     def Polar2Cartesian(polar_tensor, center=None, max_radius=None, polar_max=None, polar_min=None):
         if polar_tensor.dim() == 3:
             polar_tensor = polar_tensor.unsqueeze(0) 
