@@ -296,10 +296,6 @@ class DDPM_Tools:
         with torch.no_grad():
             x = torch.randn((n, 1, resolution, resolution)).to(self.device)
             c.to(self.device)
-            # x, x_max, x_min = self.Cartesian2Polar(x)
-            # c, c_max, c_min = self.Cartesian2Polar(c)
-            # if self.conditioned_prior == True:
-            #     x = x * torch.sqrt(variance)
 
             steps = list(reversed(range(1, self.noise_steps)))
             for i in tqdm(steps, leave=False):
@@ -323,9 +319,6 @@ class DDPM_Tools:
         if self.conditioned_prior == True:
             x = x + mean
 
-        # x = self.Polar2Cartesian(x)
-        # c = self.Polar2Cartesian(c, polar_max=c_max, polar_min=c_min)
-
         return x, c
 
     def training_losses(self, model, x_start, c, t):
@@ -340,22 +333,10 @@ class DDPM_Tools:
         Returns:
             loss
         """
-        # x_start, _, _ = self.Cartesian2Polar(x_start)
-        # c, _, _ = self.Cartesian2Polar(c)
 
         x_t, noise = self.noise_images(x_start=x_start, t=t)
 
-        # noise, _, _ = self.Cartesian2Polar(noise)
-
-        # import matplotlib.pyplot as plt
-        # plt.figure()
-        # plt.imshow(c[0, 0].detach().cpu().numpy(), cmap='jet', vmin=-1, vmax=1)
-        # plt.title('Condition c')
-        # plt.axis('off')
-        # plt.show()
-
         s = model(x_t, c, t)
-        # s = self.Polar2Cartesian(s)
 
         # l2 loss
         assert self.loss == "l2"
