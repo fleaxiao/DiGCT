@@ -236,8 +236,8 @@ class DDPM_Tools:
         all_images = []
         for i, (images, _) in enumerate(dataloader):
             all_images.append(images)
-
         all_images = torch.cat(all_images, dim=0)
+        
         mean = torch.mean(all_images, dim=0)
         variance = torch.var(all_images, dim=0)
 
@@ -296,12 +296,17 @@ class DDPM_Tools:
         with torch.no_grad():
             x = torch.randn((n, 1, resolution, resolution)).to(self.device)
             c.to(self.device)
+            batch_size, channels, height, width = c.shape
+            circular_mask = create_circular_mask(height, width).to(c.device)
+            circular_mask = circular_mask.unsqueeze(0).unsqueeze(0).expand(batch_size, channels, -1, -1)
 
             steps = list(reversed(range(1, self.noise_steps)))
             for i in tqdm(steps, leave=False):
                 t = (torch.ones(n) * i).long().to(self.device)
 
+                x = x * circular_mask  # Apply mask to x
                 s = model(x, c, t)
+                s = s * circular_mask  # Apply mask to s
 
                 alpha = self.alphas[t][:, None, None, None]
                 alpha_hat = self.alphas_hat[t][:, None, None, None]
@@ -319,6 +324,8 @@ class DDPM_Tools:
         if self.conditioned_prior == True:
             x = x + mean
 
+        # x, c = self.Polar2Cartesian(x), self.Polar2Cartesian(c)
+
         return x, c
 
     def training_losses(self, model, x_start, c, t):
@@ -333,17 +340,24 @@ class DDPM_Tools:
         Returns:
             loss
         """
+        batch_size, channels, height, width = c.shape
+        circular_mask = create_circular_mask(height, width).to(c.device)
+        circular_mask = circular_mask.unsqueeze(0).unsqueeze(0).expand(batch_size, channels, -1, -1)
 
         x_t, noise = self.noise_images(x_start=x_start, t=t)
 
+        x_t = x_t * circular_mask
         s = model(x_t, c, t)
+        s = s * circular_mask
+        noise = noise * circular_mask
 
         # l2 loss
         assert self.loss == "l2"
         mse_loss = nn.MSELoss()
+        loss = mse_loss(s, noise)
         metrics = {
-            "loss": mse_loss(noise, s),
-            "mse": mse_loss(noise, s)
+            "loss": loss,
+            "mse": loss
         }
 
         return metrics
