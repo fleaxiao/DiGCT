@@ -92,7 +92,7 @@ def data_preprocess(args):
 
                     for angle in range(0, 360, ANGLE_STEP):
                         rotated_img = surface_img.rotate(angle, expand=False)
-                        rotated_img = image_add_0(rotated_img) # critical to deal with the COMOSL generated image
+                        rotated_img = image_add_0(rotated_img, margin=MARGIN) # critical to deal with the COMOSL generated image
                         rotated_img = image_add_mask(rotated_img, margin=MARGIN)
 
                         name, ext = os.path.splitext(filename)
@@ -173,7 +173,7 @@ def data_preprocess(args):
 
                     for angle in range(0, 360, ANGLE_STEP):
                         rotated_img = l2s_image.rotate(angle, expand=False)
-                        rotated_img = image_add_0(rotated_img)
+                        rotated_img = image_add_0(rotated_img, margin=MARGIN)
                         rotated_img = image_add_mask(rotated_img, margin=MARGIN)
 
                         name, ext = os.path.splitext(filename)
@@ -205,7 +205,7 @@ def data_preprocess(args):
                         p2s_list = np.array([pixels_extend[(start_pixel + i * interval) % len(pixels_extend)] for i in range(8)]) 
                         p2s_list = smooth_interpolation(p2s_list, IMAGE_SIZE + 1)
                         p2s_image = s2c_angle(None, p2s_list, Tj_pixel, IMAGE_SIZE)
-                        p2s_image = image_add_0(p2s_image)
+                        p2s_image = image_add_0(p2s_image, margin=MARGIN)
                         p2s_image = image_add_mask(p2s_image, margin=MARGIN)
 
                         name, ext = os.path.splitext(filename)
@@ -246,7 +246,7 @@ def data_preprocess(args):
                         p2s_image = s2c_angle(None, p2s_list, Tj_pixel, IMAGE_SIZE)
                         p2s_image = s2r_angle(p2s_image, p2s_list, Tj_pixel * (L_chip - L_node) / L_chip, IMAGE_SIZE, 0, R_node_1, R_chip)
                         p2s_image = s2r_angle(p2s_image, p2s_list, Tj_pixel * (L_chip - L_node) / L_chip, IMAGE_SIZE, R_node_2, R_node_3, R_chip)
-                        p2s_image = image_add_0(p2s_image)
+                        p2s_image = image_add_0(p2s_image, margin=MARGIN)
                         p2s_image = image_add_mask(p2s_image, margin=MARGIN)
 
                         name, ext = os.path.splitext(filename)

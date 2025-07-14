@@ -185,12 +185,21 @@ def image_add_mask(image: Image, margin: int) -> Image:
     """
     image_size = image.size[0]
     mask = Image.new("L", (image_size, image_size), 0)
-    draw = ImageDraw.Draw(mask)
-    draw.ellipse((margin, margin, image_size - margin, image_size - margin), fill=255)
+    center = image_size // 2
+    radius = center - margin
+    
+    for y in range(image_size):
+        for x in range(image_size):
+            dx = x - center
+            dy = y - center
+            distance = np.sqrt(dx ** 2 + dy ** 2)
+            if distance <= radius:
+                mask.putpixel((x, y), 255)
+    
     image.putalpha(mask)
     return image
 
-def image_add_0(image: Image) -> Image:
+def image_add_0(image: Image, margin: int) -> Image:
     """
     Remove pixels outside a circular area from the image.
     Args:
@@ -204,7 +213,7 @@ def image_add_0(image: Image) -> Image:
             dx = x - center
             dy = y - center
             distance = np.sqrt(dx ** 2 + dy ** 2)
-            if distance > radius - 2: # Allow a small margin
+            if distance > radius - margin:
                 image.putpixel((x, y), 0)
     return image
 
@@ -252,7 +261,7 @@ def add_t_range(range_file: str, F: int, dx: int, I: int, add_name: str, add_val
         t_range.loc[row_index, add_name] = add_value
         t_range.to_csv(range_file, index=False)
     else:
-        raise ValueError(f"No matching row for F={F}, dx={dx}, I={I}, angle={angle}")
+        raise ValueError(f"No matching row for F={F}, dx={dx}, I={I}")
 
 def sigmoid(x):
     return 1 / (1 + np.exp(- x))

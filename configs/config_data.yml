@@ -8,7 +8,7 @@ side: True
 L2S: False
 P2S: False
 PA2S: True
-G: True
+G: False
 
 # Image parameters
 image_size: 256
