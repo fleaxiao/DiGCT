@@ -205,7 +205,7 @@ def tensor_to_PIL(tensor: torch.Tensor):
     for i in range(tensor.shape[0]):
         image_tensor = tensor[i]
         if image_tensor.ndim == 4:
-            image_tensor = image_tensor.squeeze(0)  # Remove the batch dimension
+            image_tensor = image_tensor.squeeze(0)
         image = transforms.ToPILImage()(image_tensor)
         images.append(image)
     return images
@@ -224,8 +224,26 @@ def tensor_to_PIL_range(tensor: torch.Tensor, max_value: float, min_value: float
         value_images.append(image)
 
     temp = tensor * (max_value - min_value) + min_value
-    temp_max = torch.amax(temp, dim=(1, 2, 3), keepdim=True) 
-    temp_min = torch.amin(temp, dim=(1, 2, 3), keepdim=True) 
+
+    batch_size, channels, height, width = temp.shape
+    circular_mask = create_circular_mask(height, width).to(temp.device)
+    circular_mask = circular_mask.unsqueeze(0).unsqueeze(0).expand(batch_size, channels, -1, -1)
+    
+    temp_masked = temp.clone()
+    temp_masked[~circular_mask] = float('nan') 
+    temp_masked_flat = temp_masked.view(batch_size, channels, -1)
+    
+    temp_masked_for_max = temp_masked_flat.clone()
+    temp_masked_for_max[torch.isnan(temp_masked_for_max)] = float('-inf')
+    temp_max = torch.max(temp_masked_for_max, dim=2, keepdim=True)[0]
+    
+    temp_masked_for_min = temp_masked_flat.clone()
+    temp_masked_for_min[torch.isnan(temp_masked_for_min)] = float('inf')
+    temp_min = torch.min(temp_masked_for_min, dim=2, keepdim=True)[0]
+
+    temp_max = temp_max.unsqueeze(3)
+    temp_min = temp_min.unsqueeze(3)
+    
     pixels = (temp - temp_min) / (temp_max - temp_min)
 
     pixels = (pixels * 255).type(torch.uint8)
@@ -238,6 +256,9 @@ def tensor_to_PIL_range(tensor: torch.Tensor, max_value: float, min_value: float
         pixel_images.append(image)
     temp_max_list = temp_max.squeeze().cpu().numpy().tolist()
     temp_min_list = temp_min.squeeze().cpu().numpy().tolist()
+
+    value_images = [image_add_mask(img) for img in value_images]
+    pixel_images = [image_add_mask(img) for img in pixel_images]
     return value_images, pixel_images, temp_max_list, temp_min_list
 
 def image_add_mask(image: Image) -> Image:
@@ -252,8 +273,35 @@ def image_add_mask(image: Image) -> Image:
     draw = ImageDraw.Draw(mask)
     draw.ellipse((3, 3, image_size - 3, image_size - 3), fill=255)
 
-    masked_img = np.ma.masked_where(~np.array(mask), np.array(image))
-    return masked_img
+    image_array = np.array(image)
+    mask_array = np.array(mask)
+    
+    image_array[mask_array == 0] = 0
+
+    # masked_img = np.ma.masked_where(~np.array(mask), np.array(image))
+    return Image.fromarray(image_array)
+
+def create_circular_mask(height, width, center=None, radius=None):
+    """
+    Create a circular mask for the given dimensions.
+    
+    Args:
+        height: Height of the mask
+        width: Width of the mask
+        center: Center of the circle (y, x). If None, use image center.
+        radius: Radius of the circle. If None, use minimum of height/width divided by 2.
+    
+    Returns:
+        torch.Tensor: Boolean mask where True indicates inside the circle
+    """
+    if center is None:
+        center = (height // 2, width // 2)
+    if radius is None:
+        radius = min(height, width) // 2 - 3
+    
+    y, x = torch.meshgrid(torch.arange(height), torch.arange(width), indexing='ij')
+    mask = (x - center[1]) ** 2 + (y - center[0]) ** 2 <= radius ** 2
+    return mask
 
 def convert_grey_to_white(image: Image, threshold: int = 200):
     """

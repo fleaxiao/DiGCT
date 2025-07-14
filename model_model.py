@@ -37,7 +37,8 @@ def create_model(
             input_channels=2,
             output_channels=1,
             n_blocks=n_blocks,
-            n_channels=n_channels
+            n_channels=n_channels,
+            polar_mode=False #! Polar CNN
         ).to(device)
 
     elif model_name == "ViT":

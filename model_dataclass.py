@@ -119,12 +119,13 @@ class LabeledDataset(Dataset):
         t_image = ((t_image * 2) - 1) 
         c_image = ((c_image * 2) - 1)
 
+        #! Polar CNN
         # t_image, _, _ = self.Cartesian2Polar(t_image, center=None, max_radius=t_image.shape[2] // 2 - 2)
         # c_image, _, _ = self.Cartesian2Polar(c_image, center=None, max_radius=c_image.shape [2] // 2 - 2)
 
         return t_image, c_image
     
-    @ staticmethod
+    @staticmethod
     def Cartesian2Polar(img_tensor, center=None, max_radius=None):
         if img_tensor.dim() == 3:
             img_tensor = img_tensor.unsqueeze(0) 
@@ -153,55 +154,6 @@ class LabeledDataset(Dataset):
         y = 2 * y / (H - 1) - 1
         
         grid = torch.stack([x, y], dim=-1).unsqueeze(0).repeat(B, 1, 1, 1)
-        polar_img = F.grid_sample(img_tensor, grid, mode='bilinear', padding_mode='zeros', align_corners=True)
-        
-        return polar_img.squeeze(0) if polar_img.shape[0] == 1 else polar_img, img_max, img_min
+        polar_img = F.grid_sample(img_tensor, grid, mode='nearest', padding_mode='zeros', align_corners=True)
 
-    @ staticmethod
-    def Polar2Cartesian(polar_tensor, center=None, max_radius=None, polar_max=None, polar_min=None):
-        if polar_tensor.dim() == 3:
-            polar_tensor = polar_tensor.unsqueeze(0) 
-        
-        B, C, H, W = polar_tensor.shape
-        
-        if center is None:
-            center = (W // 2, H // 2)
-        if max_radius is None:
-            max_radius = min(center[0], center[1])
-        
-        x = torch.linspace(0, W - 1, W, device=polar_tensor.device)
-        y = torch.linspace(0, H - 1, H, device=polar_tensor.device)
-        x_grid, y_grid = torch.meshgrid(x, y, indexing='ij')
-        x_grid = x_grid.T
-        y_grid = y_grid.T
-        
-        dx = x_grid - center[0]
-        dy = y_grid - center[1]
-        
-        r = torch.sqrt(dx**2 + dy**2)
-        theta = torch.atan2(dy, dx)
-        theta = torch.where(theta < 0, theta + 2 * np.pi, theta)
-        
-        r_coord = r * (H - 1) / max_radius
-        theta_coord = theta * (W - 1) / (2 * np.pi)
-        
-        r_coord_norm = 2 * r_coord / (H - 1) - 1
-        theta_coord_norm = 2 * theta_coord / (W - 1) - 1
-        r_coord_norm = torch.clamp(r_coord_norm, -1, 1)
-        theta_coord_norm = torch.clamp(theta_coord_norm, -1, 1)
-        
-        grid = torch.stack([theta_coord_norm, r_coord_norm], dim=-1).unsqueeze(0).repeat(B, 1, 1, 1)
-        cartesian_img = F.grid_sample(polar_tensor, grid, mode='bilinear', padding_mode='zeros', align_corners=True)
-        
-        valid_mask = r <= max_radius
-        valid_mask = valid_mask.unsqueeze(0).unsqueeze(0).repeat(B, C, 1, 1)
-        fill_value = torch.full_like(cartesian_img, -1.0)
-        cartesian_img = torch.where(valid_mask, cartesian_img, fill_value)
-        
-        if polar_max is not None or polar_min is not None:
-            for idx in range(cartesian_img.shape[0]):
-                cartesian_img[idx] = torch.clamp(cartesian_img[idx], min=polar_min[idx].item(), max=polar_max[idx].item())
-                cartesian_img[idx] = (cartesian_img[idx] - cartesian_img[idx].min()) / (cartesian_img[idx].max() - cartesian_img[idx].min() + 1e-8)
-                cartesian_img[idx] = cartesian_img[idx] * (polar_max[idx] - polar_min[idx]) + polar_min[idx]
-        
-        return cartesian_img.squeeze(0) if cartesian_img.shape[0] == 1 else cartesian_img     
+        return polar_img.squeeze(0) if polar_img.shape[0] == 1 else polar_img, img_max, img_min
