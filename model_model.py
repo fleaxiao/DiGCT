@@ -1,4 +1,4 @@
-from networks.UNet import UNet
+from DiGCT.networks.UNet import UNet
 from networks.ViT import ViT
 from model_diff import VDM_Tools, DDPM_Tools
 
@@ -37,8 +37,7 @@ def create_model(
             input_channels=2,
             output_channels=1,
             n_blocks=n_blocks,
-            n_channels=n_channels,
-            polar_mode=False #! Polar CNN
+            n_channels=n_channels
         ).to(device)
 
     elif model_name == "ViT":
