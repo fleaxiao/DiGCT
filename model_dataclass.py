@@ -119,41 +119,4 @@ class LabeledDataset(Dataset):
         t_image = ((t_image * 2) - 1) 
         c_image = ((c_image * 2) - 1)
 
-        #! Polar CNN
-        # t_image, _, _ = self.Cartesian2Polar(t_image, center=None, max_radius=t_image.shape[2] // 2 - 2)
-        # c_image, _, _ = self.Cartesian2Polar(c_image, center=None, max_radius=c_image.shape [2] // 2 - 2)
-
         return t_image, c_image
-    
-    @staticmethod
-    def Cartesian2Polar(img_tensor, center=None, max_radius=None):
-        if img_tensor.dim() == 3:
-            img_tensor = img_tensor.unsqueeze(0) 
-        
-        B, C, H, W = img_tensor.shape
-
-        img_max = img_tensor.view(B, -1).max(dim=1)[0]
-        img_min = img_tensor.view(B, -1).min(dim=1)[0]
-        
-        if center is None:
-            center = (W // 2, H // 2)
-        if max_radius is None:
-            max_radius = min(center[0], center[1])
-        
-        theta = torch.linspace(0, 2 * np.pi, W, device=img_tensor.device)
-        r = torch.linspace(0, max_radius, H, device=img_tensor.device)
-        
-        theta_grid, r_grid = torch.meshgrid(theta, r, indexing='ij')
-        theta_grid = theta_grid.T 
-        r_grid = r_grid.T
-        
-        x = center[0] + r_grid * torch.cos(theta_grid)
-        y = center[1] + r_grid * torch.sin(theta_grid)
-
-        x = 2 * x / (W - 1) - 1
-        y = 2 * y / (H - 1) - 1
-        
-        grid = torch.stack([x, y], dim=-1).unsqueeze(0).repeat(B, 1, 1, 1)
-        polar_img = F.grid_sample(img_tensor, grid, mode='nearest', padding_mode='zeros', align_corners=True)
-
-        return polar_img.squeeze(0) if polar_img.shape[0] == 1 else polar_img, img_max, img_min
