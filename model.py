@@ -220,7 +220,7 @@ def main(args):
             sample_save_metrics(model=model, device=DEVICE,sampler=sampler, length=NR_SAMPLES, test_dataloader=dataloader, sample_path=SAMPLE_PATH, **parameters)
 
 if __name__ == '__main__':
-    p = argparse.ArgumentParser(description='PCBCopilot')
+    p = argparse.ArgumentParser(description='DiGCT Model')
     p.add_argument('--config', type=argparse.FileType(mode='r'), default='configs/config_model.yml')
 
     # Seed

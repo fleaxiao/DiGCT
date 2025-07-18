@@ -336,7 +336,7 @@ def data_preprocess(args):
 
 
 if __name__ == '__main__':
-    p = argparse.ArgumentParser(description='Dataset Preprocessing')
+    p = argparse.ArgumentParser(description='DiGCT Data')
     p.add_argument('--config', type=argparse.FileType(mode='r'), default='configs/config_data.yml')
 
     # Load config file
