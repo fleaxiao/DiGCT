@@ -4,18 +4,18 @@
 ![arXiv](https://img.shields.io/badge/arXiv-2312.16476-8A2BE2?style=for-the-badge&logo=arxiv) [![Project Website](https://img.shields.io/badge/Website-Project%20Page-green?style=for-the-badge&logo=github)](https://github.com/fleaxiao/DiGCT)
 [![Dataset IGCT X](https://img.shields.io/badge/Dataset-IGCT_x-yellow?style=for-the-badge&logo=huggingface&logoColor=white)](https://huggingface.co/datasets/fleaxiao/IGCTX)
 
-Official implementation for "Reference-Refined Diffusion Model for Online Thermal Management of Press-Pack IGCTs via Synergistic Physics-Data Integration". This project enables a diffusion-based digital twin model to estimate, evaluate, and adjust the surface temperature of press-Pack IGCTs.
+Official implementation for "Reference-Refined Diffusion Model for Online Thermal Management of Press-Pack IGCTs via Synergistic Physics-Data Integration". This project enables a diffusion-based digital twin model to estimate, evaluate, and optimize the surface temperature of press-Pack IGCTs.
 
 <img src="./assets/figure1.png" alt="concept" width="500">
 
 ## ✨ Highlights
 * **Synergistic Physics-Data Integration**: Integrates the analytical model and measurement data to an unified IGCT surface temperature representative.
 * **Reference-Refined Diffusion Model (R2DM)**: Iteratively refines the residual difference between the reference and the target to achieve high modeling performance.
-* **Closed-loop Surface Temperature Optimization**: Supports multiple evaluation criteria to adjust the IGCT surface temperature distribution.
+* **Closed-loop Surface Temperature Optimization**: Supports multiple evaluation criteria to optimize the IGCT surface temperature distribution.
 * **Specialized `IGCT X` Dataset**: introduces the first open-source dataset dedicated the surface temperature of IGCTs, considering pressure eccentricity, thermal expansion and variation of system metrics (current, pressure, heat dissipation).
 
 ## 🧩 Setup Guideline
-Please meet the package requirement of `environment.yaml`. 
+Please meet the package requirement of `assets/requirement.yaml`. 
 ```bash
 conda env create -n DiGCT -f requirement.yml
 ```
@@ -30,7 +30,7 @@ In general, the following dependencies should be installed
 ```bash
 mkdir -n data
 ```
-* Download the open-source dataset [IGCT X](https://huggingface.co/datasets/fleaxiao/IGCTX) in the folder `data`
+* Download the open-source dataset [IGCTX](https://huggingface.co/datasets/fleaxiao/IGCTX) in the folder `data`
 * Adjust the key parameters for image and analytical model in `configs/config_data.yml`
 
     - surface: clip the surface temperature target
@@ -73,7 +73,7 @@ python model.py -config configs/config_model.yml
 
 The project is built based on the following repository:
 - [lucidrains/denoising-diffusion-pytorch](https://github.com/lucidrains/denoising-diffusion-pytorch)
-- [ximinng/PyTorch-SVGRender](https://github.com/ximinng/PyTorch-SVGRender)
+- [ximinng/LLM4SVG](https://github.com/ximinng/LLM4SVG)
 
 We gratefully thank the authors for their wonderful works.
 
@@ -81,14 +81,7 @@ We gratefully thank the authors for their wonderful works.
 If you use this code for your research, please cite the following work:
 
 ```
-@InProceedings{svgdreamer_xing_2023,
-    author    = {Xing, Ximing and Zhou, Haitao and Wang, Chuang and Zhang, Jing and Xu, Dong and Yu, Qian},
-    title     = {SVGDreamer: Text Guided SVG Generation with Diffusion Model},
-    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
-    month     = {June},
-    year      = {2024},
-    pages     = {4546-4555}
-}
+
 ```
 
 ## ☎️ Contact
