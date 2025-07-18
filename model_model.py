@@ -1,4 +1,4 @@
-from DiGCT.networks.UNet import UNet
+from networks.UNet import UNet
 from networks.ViT import ViT
 from model_diff import VDM_Tools, DDPM_Tools
 
