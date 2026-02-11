@@ -1,0 +1,12 @@
+__pycache__/
+
+configs/
+data*/
+dataset*/
+results/
+
+**.ipynb
+**.err
+**.out
+**.run
+**.py

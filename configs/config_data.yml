@@ -1,0 +1,53 @@
+# Paths
+data_path: "data_test"
+dataset_path: "dataset_test"
+
+# Dataset generation options
+table: True
+surface: True
+side: True
+G: True
+I_option: "PA2S" # Options: "L2S", "P2S", "PA2S"
+
+# Image parameters
+image_size: 256
+angle_step: 30
+margin: 3
+
+# Mechanical parameters
+F_min: 35
+F_max: 45
+
+# Temperature parameters
+Tc: 25
+h_g: 2e5
+
+# Circuit parameters
+Vce: 1.5
+rce: 1.5e-3
+f: 250
+Irate: 1500
+Eon: 1.8
+Eoff: 26.5
+
+# geometric parameters
+R_node_1: 2.5e-3
+R_node_2: 21.5e-3
+R_node_3: 24.5e-3
+L_node: 0.1e-3
+R_heatsink: 67.5e-3
+L_heatsink: 82e-3
+R_spacer: 42.5e-3
+L_spacer: 2e-3
+R_chip: 42.5e-3
+L_chip: 0.5e-3
+
+# material parameters
+k_cu: 400
+k_mo: 138
+k_si: 130
+
+k_water: 0.6
+Pr_water: 7.0
+mu_water: 1.0e-3
+rho_water: 1000.0

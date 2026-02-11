@@ -1,0 +1,28 @@
+#!/bin/bash
+
+#SBATCH --job-name=digct
+#SBATCH --output=/home/tue/20234635/DiGCT_Module/DiGCT/results/Outputfiles/Train_%j.txt
+#SBATCH --partition=elec.gpu-es02.q
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --gpus=1
+#SBATCH --error=slurm-%j.err
+#SBATCH --output=slurm-%j.out
+#SBATCH --time=24:00:00
+#SBATCH --mem=20G
+
+# environment setup
+module purge
+source venv/bin/activate
+
+# # Python command ($TEMPDIR)
+# rsync -a --exclude='results' /home/tue/20234635/DiGCT_Module/DiGCT $TMPDIR/
+# cd $TMPDIR
+# cd DiGCT
+# python3 model.py
+# rsync -a results/ /home/tue/20234635/DiGCT_Module/DiGCT/results/
+# rm -rf $TMPDIR
+
+# Python command
+cd DiGCT
+python3 model.py

@@ -1,0 +1,48 @@
+# Seed
+default_seed: 25
+
+# Paths
+input_path: "dataset"
+output_path: "results"
+data_path: "IGCT"
+target_folder: "S"
+condition_folder: "PA2S"
+
+# System settings
+physics_constraint: False
+conditioned_prior: False
+resolution: 128
+validation_split: 0.2
+test_split: 0.2
+
+# Training parameters
+training: False
+generate_sample: True
+threshold_training: False
+clip_grad: False
+ema: False
+epochs: 100
+noise_steps: 250
+batch_size: 4
+init_lr: 0.00002
+weight_decay: 0.001
+threshold: 0.01
+sample_number: 5
+sample_epoch: 10
+ema_decay: 0.999
+lambda_physics: 0.001
+loss: "l2"
+noise_schedule: "fixed_linear"
+
+# Test settings
+testing: True
+calculate_metrics: False
+sample_metrics: True
+test_path: "UNet_bs(4)_noisesteps(250)_block(2)_loss(l2)_4"
+sample_model: "best_model.pth"
+length_sample: 20
+
+# Model Parameters
+model_name: "UNet"  
+n_blocks: 2
+n_channels: 32
