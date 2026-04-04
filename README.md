@@ -10,9 +10,9 @@ Official implementation for "Synergistic Physics-Data Constrained Diffusion Mode
 
 ## ✨ Highlights
 * **Synergistic Physics-Data Integration**: The GCT surface temperature reference is constructed by interpolating analytical predictions and real-time temperature measurements. This synergistic integration compresses the physical mechanisms and empirical observations into a geometric representation.
-* **Heuristic Physics-Constrained Refinement**: The proposed diffusion model iteratively refines the residual error of the reference, generating high-fidelity GCT surface temperature distribution following physical consistency.
-* **Gradient-Based Temperature Optimization**: n online optimization strategy is developed to regulate GCT surface temperature distributions, supporting diverse metrics such as maximum value, mean value, and spatial variance.
-* **Specialized Dataset _`IGCT X`_**: The first open-source dataset tailored for surface thermal management of press-pack IGCTs is introduced. It contains GCT surface and side temperature data in pairs, considering multiple physics coupling effects and varied system parameters.
+* **Heuristic Physics-Constrained Refinement**: The proposed diffusion model iteratively refines the residual error of the reference, generating high-fidelity GCT surface temperature distribution following specific regulation and consistency requirements.
+* **Gradient-Based Temperature Optimization**: An online optimization strategy is developed to regulate GCT surface temperature distributions, supporting diverse metrics such as maximum value, mean value, and spatial variance.
+* **Specialized Dataset _`IGCT X`_**: The first dataset tailored for surface thermal management of press-pack IGCTs is introduced. It contains GCT surface and side temperature data in pairs, considering multiple physics coupling effects and varied system parameters.
 
 ## 🧩 Setup Guideline
 Please meet the package requirement of `assets/requirement.yaml`. 
@@ -30,7 +30,7 @@ In general, the following dependencies should be installed
 ```bash
 mkdir -n data
 ```
-* Download the open-source dataset [IGCTX](https://huggingface.co/datasets/fleaxiao/IGCTX) in the folder `data`
+* Download the dataset [IGCTX](https://huggingface.co/datasets/fleaxiao/IGCTX) in the folder `data`
 * Adjust the key parameters for temperature preprocess and analytical model in `configs/config_data.yml`
 
     - surface: clip the surface temperature target
