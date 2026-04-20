@@ -1,13 +1,13 @@
 # Paths
-data_path: "data_test"
-dataset_path: "dataset_test"
+data_path: "data"
+dataset_path: "dataset"
 
 # Dataset generation options
-table: True
-surface: True
+table: False
+surface: False
 side: True
-G: True
-I_option: "PA2S" # Options: "L2S", "P2S", "PA2S"
+G: False
+I_option: "P2S" # Options: "L2S", "P2S", "PA2S"
 
 # Image parameters
 image_size: 256
@@ -26,7 +26,7 @@ h_g: 2e5
 Vce: 1.5
 rce: 1.5e-3
 f: 250
-Irate: 1500
+Irate: 1500k
 Eon: 1.8
 Eoff: 26.5
 

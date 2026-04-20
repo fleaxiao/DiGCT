@@ -30,7 +30,6 @@ In general, the following dependencies should be installed
 ```bash
 mkdir -n data
 ```
-* Download the dataset [IGCTX](https://huggingface.co/datasets/fleaxiao/IGCTX) in the folder `data`
 * Adjust the key parameters for temperature preprocess and analytical model in `configs/config_data.yml`
 
     - surface: clip the surface temperature target
