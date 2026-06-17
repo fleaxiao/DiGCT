@@ -1,10 +1,6 @@
 # DiGCT: Synergistic Physics-Data Constrained Diffusion Model for Surface Thermal Management of Press-Pack IGCTs
 
-![IEEE](https://img.shields.io/badge/IEEE-Reviewing-blue?style=for-the-badge&logo=ieee)
-![Techrxiv](https://img.shields.io/badge/TechRxiv-2312.16476-8A2BE2?style=for-the-badge&logo=arxiv) [![Project Website](https://img.shields.io/badge/Website-Project%20Page-green?style=for-the-badge&logo=github)](https://github.com/fleaxiao/DiGCT)
-[![Dataset IGCT X](https://img.shields.io/badge/Dataset-IGCT_x-yellow?style=for-the-badge&logo=huggingface&logoColor=white)](https://huggingface.co/datasets/fleaxiao/IGCTX)
-
-Official implementation for "Synergistic Physics-Data Constrained Diffusion Model for Surface Thermal Management of Press-Pack IGCTs". This project enables a diffusion-based digital twin model to monitor, evaluate, and optimize the surface temperature distribution of press-Pack IGCTs.
+Official implementation for "Synergistic Physics-Data Constrained Diffusion Model for Surface Thermal Management of Press-Pack IGCTs". This project enables a diffusion-based digital twin model to monitor, evaluate, and optimize the surface temperature distribution of press-pack IGCTs.
 
 <img src="./assets/figure3.png" alt="flowchart" width="800">
 
@@ -24,25 +20,6 @@ In general, the following dependencies should be installed
 * PyTorch >= 1.6.0
 
 ## 🔥 Quickstart
-
-### 🗂️ Data Preparation
-* Create an empty folder `data`
-```bash
-mkdir -n data
-```
-* Adjust the key parameters for temperature preprocess and analytical model in `configs/config_data.yml`
-
-    - surface: clip the surface temperature target
-    - side: clip side temperature measurement
-    - L2S: convert the side temperature measurement line to the surface view reference
-    - P2S: convert the side temperature measurement points to the surface view reference
-    - PA2S: convert the side temperature measurement points and the analytical model result to the surface view reference
-    - G: calculate the gap between surface temperature target and the temperature reference
-
-* Preprocess data for DiGCT training. The preprocessed dataset should appear in the folder `dataset`
-```bash
-python data.py -config configs/config_data.yml
-```
 
 ### 💪 Model Training
 * Adjust the key parameters for model training in `configs/config_model.yml`
@@ -81,7 +58,13 @@ We gratefully thank the authors for their wonderful works.
 If you use this code for your research, please cite the following work:
 
 ```
-
+@ARTICLE{11567995,
+  author={Yang, Xiao and Xiao, Yu and Li, Tianchen and Yang, Dongsheng},
+  journal={IEEE Transactions on Industrial Informatics}, 
+  title={Synergistic Physics-Data Constrained Diffusion Model for Surface Thermal Management of Press-Pack IGCTs}, 
+  year={2026},
+  pages={1-11},
+  doi={10.1109/TII.2026.3693363}}
 ```
 
 ## ☎️ Contact

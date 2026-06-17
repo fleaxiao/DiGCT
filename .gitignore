@@ -4,9 +4,6 @@ configs/
 data*/
 dataset*/
 results/
+fem/
 
 **.ipynb
-**.err
-**.out
-**.run
-**.py
